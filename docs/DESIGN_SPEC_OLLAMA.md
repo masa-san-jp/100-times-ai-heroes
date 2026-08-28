@@ -53,6 +53,7 @@ data/run_日時/
 |---|---|---|
 | `GENERATE_IMAGES` | `false` | CLI未指定時の画像生成可否 |
 | `COMFYUI_URL` | `http://127.0.0.1:8188` | ComfyUIのlocalhost URL |
+| `COMFYUI_DIR` | `./.runtime/ComfyUI` | `run_local.py`が起動するComfyUI本体の導入先 |
 | `COMFYUI_MODEL_PROFILE` | `animagine-xl-4.0-opt` | 画像モデルprofile ID |
 | `COMFYUI_MODEL_PROFILES_PATH` | `./config/comfyui/model_profiles.json` | profile定義JSON |
 | `COMFYUI_WORKFLOW_PATH` | `./config/comfyui/text2image_api_workflow.json` | API形式workflow |
@@ -88,6 +89,8 @@ data/run_日時/
 | `OPENAI_API_KEY` | empty | `--provider openai`時のみ必要 |
 
 クラウドLLM用の依存関係は`requirements-cloud.txt`に分離する。
+
+初回導入は`setup_local.py`で行う。通常はOllamaとComfyUIを導入する。OpenAI providerだけを使う場合は`--skip-ollama --with-cloud`を指定する。`run_local.py`は必要なlocalhostサービスを起動してから生成プログラムを呼び出す。
 
 ## 4. seed CSV仕様
 
@@ -213,14 +216,18 @@ image_path, image_seed
 ## 10. 実行例
 
 ```bash
-# ローカルLLMのみ
-python ollama_hero_gen.py --iterations 1
+# 初回導入（Ollama + ComfyUI + 選択した画像モデル）
+python setup_local.py
+
+# ローカルLLMのみ。必要なサービスはrun_local.pyが起動する
+python run_local.py --iterations 1
 
 # Ollama + ComfyUIでテキストと画像を生成
-python ollama_hero_gen.py --iterations 1 --generate-images
+python run_local.py --iterations 1 --generate-images
 
 # 任意のクラウドLLM + ローカルComfyUI画像生成
-python ollama_hero_gen.py --provider openai --iterations 1 --generate-images
+python setup_local.py --skip-ollama --with-cloud
+python run_local.py --provider openai --iterations 1 --generate-images
 ```
 
 ## 11. テスト方針

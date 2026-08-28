@@ -2,6 +2,42 @@
 ![20240915-100-TIMES-AI-HEROES-v1 0-1920](https://github.com/user-attachments/assets/4bedc96b-0139-4838-8fe9-251ddee41220)
 - Winner of the Special Jury Award at the 3rd AI Art Grand Prix
 
+## このリポジトリは何か
+
+100 TIMES AI HEROESは、キャラクターの設定（名前、プロフィール、決め台詞、能力、役割）を生成し、必要に応じて全身キャラクター画像まで作るローカルAIパイプラインです。
+
+現在の利用経路は **ローカルCSV + Ollama + ComfyUI** です。Google Sheetsは使いません。通常の実行ではクラウドAPIへ接続せず、クラウドLLMは明示的に選んだ場合だけ利用できます。
+
+### まず動かす
+
+初回だけインターネット接続が必要です。Ollamaモデル、ComfyUI、選択した画像モデルを導入するため、空きディスク30GB以上を推奨します。
+
+```bash
+git clone https://github.com/masa-san-jp/100-times-ai-heroes.git
+cd 100-times-ai-heroes
+
+python3 setup_local.py
+python3 run_local.py --iterations 1 --generate-images
+```
+
+macOS/Linuxでは `bash setup_local.sh` / `bash run_local.sh` も使えます。WindowsなどでOllamaを自動導入できない環境では、先に[Ollama公式ダウンロード](https://ollama.com/download)から導入してください。
+
+Windowsでは `python3` を `python` または `py` に読み替えてください。
+
+生成結果は `data/run_日時/` に保存されます。既定のローカル経路では、導入完了後の生成にネットワーク接続は不要です。
+
+### 利用経路
+
+| 目的 | コマンド | 外部サービス |
+|---|---|---|
+| テキストだけ | `python3 run_local.py --iterations 1` | Ollama（localhost） |
+| テキスト + 画像 | `python3 run_local.py --iterations 1 --generate-images` | Ollama + ComfyUI（localhost） |
+| OpenAIでテキスト生成 | `python3 run_local.py --provider openai --iterations 1` | OpenAI API（明示指定時のみ） |
+| 画像モデル比較 | `python3 tools/benchmark_image_models.py` | ComfyUI（localhost） |
+
+`setup_local.py` は導入用、`run_local.py` はサービス起動と実行用、`ollama_hero_gen.py` は生成パイプライン本体です。
+OpenAI経路を使う場合は、先に `python3 setup_local.py --skip-ollama --skip-images --with-cloud` を実行して追加依存関係を導入し、`OPENAI_API_KEY`を設定してください。
+
 ## Concept
 In this project, I broke down the thought flow and work process of character creation in my own manga production and reproduced it using generative AI, accelerating the speed of character creation.
 By utilizing the capabilities of generative AI, I hope to improve the productivity of processes such as character creation, enabling me to create works that are more focused on my own artistic creativity.
@@ -43,17 +79,17 @@ Finalist entry for the 3rd AI Art Grand Prix
 ### Features
 
 - **生成時はローカル実行**: モデル導入後は外部サービスへ接続しない
-- **無料**: 既定のOllama実行ではAPI課金なし
+- **API料金不要**: 既定のローカル実行ではクラウドAPI課金なし（ハードウェア・電気代は別）
 - **プライバシー**: 既定の実行ではデータがクラウドに送信されない
 - **シード自動拡張**: 生成ごとに新しい属性が追加される
 - **ローカル画像生成**: ComfyUIを使って画像もローカル保存できる
 
 ### Requirements
 
-- Python 3.9+
+- Python 3.10+（テキスト生成だけを手動構成する場合は3.9+）
 - [Ollama](https://ollama.com/)
 - Git
-- 画像生成まで使う場合: macOS Apple Silicon / Windows / Linux と、モデル保存用の空き容量
+- 画像生成まで使う場合: ComfyUIを動かせる環境と、モデル保存用の空き容量
 - 推奨LLMモデル: `gpt-oss:20b`（デフォルト）
 
 ### Quick Start（ローカル版を全部導入）
@@ -109,7 +145,7 @@ python3 setup_local.py --comfyui-dir /path/to/ComfyUI
 python3 setup_local.py --profile illustrious-xl-v2
 ```
 
-セットアップ後は、`run_local.py`（macOS/Linuxでは`run_local.sh`）がOllamaとComfyUIをlocalhost限定で起動します。ログは `.runtime/ollama.log` と `.runtime/comfyui.log` に保存されます。
+セットアップ後は、`run_local.py`（macOS/Linuxでは`run_local.sh`）が必要なOllamaとComfyUIをlocalhost限定で起動します。ログは `.runtime/ollama.log` と `.runtime/comfyui.log` に保存されます。
 
 ### Manual / text-only setup
 
@@ -256,25 +292,43 @@ python tools/benchmark_image_models.py \
 
 既定のworkflowは `config/comfyui/text2image_api_workflow.json` です。画像生成時も、ComfyUI以外の外部サービスには接続しません。
 
+### Troubleshooting
+
+- `Ollamaが見つかりません`: macOSでは `brew install ollama`、その他の環境では[公式ダウンロード](https://ollama.com/download)を実行してから、セットアップを再実行します。
+- `ComfyUIが未導入です`: `python3 setup_local.py` を完了してから `run_local.py` を実行します。
+- `checkpointが見つからない`: 使用するprofileで `python3 setup_local.py --profile <profile>` を実行します。
+- 起動後に接続できない: `.runtime/ollama.log` または `.runtime/comfyui.log` を確認します。ComfyUIは `127.0.0.1:8188` のみで待ち受けます。
+- メモリ不足: `.env` の `MINIMUM_AVAILABLE_MEMORY_PERCENT` を上げ、`--iterations 1` で確認します。複数モデルの同時ロードは行いません。
+
 ### Optional cloud LLM
 
-クラウドLLMを使う場合だけ、追加依存関係をインストールしてproviderを明示します。
+クラウドLLMを使う場合だけ、追加依存関係を導入してproviderを明示します。画像生成を併用する場合も、画像はlocalhostのComfyUIで生成されます。
 
 ```bash
-pip install -r requirements-cloud.txt
-OPENAI_API_KEY=... python ollama_hero_gen.py --provider openai --iterations 1
+# テキストだけ。画像も使う場合は --skip-images を外す
+python3 setup_local.py --skip-ollama --skip-images --with-cloud
+OPENAI_API_KEY=... python3 run_local.py --provider openai --iterations 1
 ```
 
 `--provider`を省略した場合はOllamaが使われます。クラウドLLMを使う場合でも、`--generate-images`の画像生成先はlocalhostのComfyUIです。
 
+### License and model terms
+
+このリポジトリには現在 `LICENSE` ファイルがないため、コードの再利用条件は明示されていません。コードを再配布・組み込む場合は、権利者に確認してください。
+
+画像モデルはリポジトリに含めず、セットアップ時に選択したモデルカードから取得します。モデルごとにライセンスと利用制限が異なります。特に実験候補を商用制作で使う場合は、`config/comfyui/model_profiles.json` の `source_url` とモデルカードを確認してください。
+
 ---
 
-## Original Code (OpenAI API)
+## Original Code (OpenAI API, reference only)
+
+以下は旧版のコードです。現在の利用入口は `setup_local.py` / `run_local.py` であり、旧版を実行するための手順ではありません。
+
 - https://github.com/masa-jp-art/100-times-ai-heroes/blob/main/20240916-AI-Art-GP-3-Charactor-v1.0.py
 
-## Original workflow
+## Original workflow (reference only)
 
-以下は元のColab版のワークフローです。現在のローカル版はGoogle Sheetsではなく、`data/seed_*.csv` と `data/run_*/output.csv` を使用します。
+以下は元のColab版のワークフローです。現在のローカル版ではGoogle Sheetsを使わず、`data/seed_*.csv` と `data/run_*/output.csv` を使用します。
 ```mermaid
 flowchart LR
 	Human((Human)) --> SeedsSheet[(Seeds Sheet)]
