@@ -154,6 +154,8 @@ data/
     └── images/         # --generate-images時のみ作成
 ```
 
+選別した画像作例は `examples/` に保存します。モデル比較作例の生成方法は [examples/README.md](examples/README.md) を参照してください。
+
 ### Local image generation
 
 ComfyUIをlocalhostで起動し、画像生成モデルを事前に配置したうえで実行します。画像モデルはプロファイルで切り替えられます。
