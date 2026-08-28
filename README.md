@@ -52,27 +52,86 @@ Finalist entry for the 3rd AI Art Grand Prix
 
 - Python 3.9+
 - [Ollama](https://ollama.com/)
-- 推奨モデル: `gpt-oss:20b`（デフォルト）
+- Git
+- 画像生成まで使う場合: macOS Apple Silicon / Windows / Linux と、モデル保存用の空き容量
+- 推奨LLMモデル: `gpt-oss:20b`（デフォルト）
 
-### Quick Start
+### Quick Start（ローカル版を全部導入）
 
 ```bash
-# 1. Ollamaインストール（macOS）
+# 初回だけ。Ollama、プロジェクト用Python環境、ComfyUI、
+# デフォルト画像モデル（約7GB）を導入する
+python3 setup_local.py
+
+# 以降は、サービスを自動起動して1キャラクター生成
+python3 run_local.py --iterations 1 --generate-images
+```
+
+macOS/Linuxでは同じ処理を `bash setup_local.sh` / `bash run_local.sh` として実行できます。
+
+初回セットアップでは次の処理を行います。
+
+- Ollamaの確認（macOSでHomebrewがある場合はインストールを提案）
+- `gpt-oss:20b` の導入
+- プロジェクト用の `.venv` 作成と依存関係の導入
+- `.runtime/ComfyUI` へのComfyUI導入
+- `.runtime/ComfyUI/models/checkpoints/` への選択モデル導入
+- モデルのSHA256検証と `.env` の作成
+
+LLMモデルと画像モデルは大容量のため、導入前に確認を表示します。確認を省略する場合は次を使います。
+
+```bash
+python3 setup_local.py --yes
+```
+
+画像生成を使わず、テキスト生成だけ導入する場合:
+
+```bash
+python3 setup_local.py --skip-images
+python3 run_local.py --iterations 1
+```
+
+導入予定だけ確認する場合:
+
+```bash
+python3 setup_local.py --dry-run
+```
+
+`setup_local.sh` はランタイムをリポジトリ内の `.runtime/` に隔離します。既存のComfyUIを使いたい場合は、導入先を指定できます。
+
+```bash
+python3 setup_local.py --comfyui-dir /path/to/ComfyUI
+```
+
+使用する画像モデルを変更する場合は、profileを1つだけ指定します。候補を全て自動取得することはありません。
+
+```bash
+python3 setup_local.py --profile illustrious-xl-v2
+```
+
+セットアップ後は、`run_local.py`（macOS/Linuxでは`run_local.sh`）がOllamaとComfyUIをlocalhost限定で起動します。ログは `.runtime/ollama.log` と `.runtime/comfyui.log` に保存されます。
+
+### Manual / text-only setup
+
+自動セットアップを使わず、従来どおり手動で導入する場合:
+
+```bash
+# Ollamaインストール（macOS）
 brew install ollama
 
-# 2. モデルダウンロード（初回のみ。標準: gpt-oss:20b）
+# モデルダウンロード（初回のみ。標準: gpt-oss:20b）
 ollama pull gpt-oss:20b
 
-# 3. 依存インストール
+# 依存インストール
 pip install -r requirements.txt
 
-# 4. 環境設定
+# 環境設定
 cp .env.example .env
 
-# 5. Ollamaを起動（別ターミナル。すでに起動中なら不要）
+# Ollamaを起動（別ターミナル。すでに起動中なら不要）
 ollama serve
 
-# 6. 実行（10キャラクター生成）
+# 実行（10キャラクター生成）
 python ollama_hero_gen.py -n 10
 ```
 
@@ -158,14 +217,13 @@ data/
 
 ### Local image generation
 
-ComfyUIをlocalhostで起動し、画像生成モデルを事前に配置したうえで実行します。画像モデルはプロファイルで切り替えられます。
+`setup_local.py` を実行済みなら、ComfyUIの手動起動やモデル配置は不要です。次のコマンドでOllamaとComfyUIを起動し、画像まで生成します。
 
 ```bash
-# .envで比較候補を選択（checkpoint名はprofileから自動設定）
-COMFYUI_MODEL_PROFILE=animagine-xl-4.0-opt
-
-python ollama_hero_gen.py --iterations 1 --generate-images
+python3 run_local.py --iterations 1 --generate-images
 ```
+
+手動構成または既存のComfyUIを使う場合は、ComfyUIを `http://127.0.0.1:8188` で起動し、checkpointを `models/checkpoints/` に配置してください。`.env` の `COMFYUI_MODEL_PROFILE` でprofileを指定できます。
 
 候補と設定は `config/comfyui/model_profiles.json` に定義しています。
 

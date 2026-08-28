@@ -4,6 +4,7 @@ credentials.json
 
 # Data (generated)
 data/
+.runtime/
 
 # Python
 __pycache__/
