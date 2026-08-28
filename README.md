@@ -38,6 +38,15 @@ Windowsでは `python3` を `python` または `py` に読み替えてくださ�
 `setup_local.py` は導入用、`run_local.py` はサービス起動と実行用、`ollama_hero_gen.py` は生成パイプライン本体です。
 OpenAI経路を使う場合は、先に `python3 setup_local.py --skip-ollama --skip-images --with-cloud` を実行して追加依存関係を導入し、`OPENAI_API_KEY`を設定してください。
 
+## 関連リポジトリ
+
+100 TIMES AIシリーズの制作工程を、キャラクター・物語・世界観・マンガ作画に分けて扱う兄弟リポジトリです。
+
+- [100-times-ai-heroes](https://github.com/masa-san-jp/100-times-ai-heroes) — 本リポジトリ。キャラクター設定と、必要に応じた全身キャラクター画像を生成します。
+- [100-times-ai-heros-journey](https://github.com/masa-san-jp/100-times-ai-heros-journey) — ヒーローズ・ジャーニーの物語構造に沿って、物語やプロットを自動生成します。リポジトリ名は `heros` 表記です。
+- [100-times-ai-world-building](https://github.com/masa-san-jp/100-times-ai-world-building) — AIを活用した世界観構築ワークフローを、Jupyter Notebookで体験できます。
+- [100-times-ai-manga-drawing](https://github.com/masa-san-jp/100-times-ai-manga-drawing) — 生成AIを活用したマンガ作画ワークフローの実験・制作を扱います。
+
 ## Concept
 In this project, I broke down the thought flow and work process of character creation in my own manga production and reproduced it using generative AI, accelerating the speed of character creation.
 By utilizing the capabilities of generative AI, I hope to improve the productivity of processes such as character creation, enabling me to create works that are more focused on my own artistic creativity.
