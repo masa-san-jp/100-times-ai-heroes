@@ -25,7 +25,8 @@
       "negative_prompt": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
       "notes": "アニメ・JRPG系の第一比較候補。",
       "source_url": "https://huggingface.co/cagliostrolab/animagine-xl-4.0",
-      "license_name": "CreativeML Open RAIL++-M"
+      "license_name": "CreativeML Open RAIL++-M",
+      "model_sha256": "6327eca98bfb6538dd7a4edce22484a1bbc57a8cff6b11d075d40da1afb847ac"
     },
     "illustrious-xl-v2": {
       "checkpoint_name": "Illustrious-XL-v2.0.safetensors",
@@ -39,7 +40,8 @@
       "negative_prompt": "low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature",
       "notes": "線と色を重視するイラスト寄りの比較候補。",
       "source_url": "https://huggingface.co/OnomaAIResearch/Illustrious-XL-v2.0",
-      "license_name": "CreativeML Open RAIL-M"
+      "license_name": "CreativeML Open RAIL-M",
+      "model_sha256": "c2a1a3eaa13d4c107dc7e00c3fe830cab427aa026362740ea094745b3422a331"
     },
     "pony-v6-xl": {
       "checkpoint_name": "ponyDiffusionV6XL_v6StartWithThisOne.safetensors",
@@ -55,7 +57,8 @@
       "experimental": true,
       "notes": "獣人・異種族には有力。clip skip 2とライセンス条件を確認する。",
       "source_url": "https://huggingface.co/LyliaEngine/Pony_Diffusion_V6_XL",
-      "license_name": "Modified Fair AI Public License 1.0-SD"
+      "license_name": "Creative Commons Data License Agreement - Permissive 2.0",
+      "model_sha256": "67ab2fd8ec439a89b3fedb15cc65f54336af163c7eb5e4f2acc98f090a29b0b3"
     },
     "noobai-xl-1.1": {
       "checkpoint_name": "NoobAI-XL-v1.1.safetensors",
@@ -70,7 +73,8 @@
       "experimental": true,
       "notes": "品質候補。利用条件とComfyUI固有設定を検証してから採用する。",
       "source_url": "https://huggingface.co/Laxhar/noobai-XL-1.1",
-      "license_name": "Fair AI Public License 1.0-SD"
+      "license_name": "Fair AI Public License 1.0-SD",
+      "model_sha256": "6681e8e4b134c81f16533acedb0d406d7e5e366e1624b4105178c64d00b05d51"
     }
   }
 }

@@ -17,7 +17,7 @@
 | `pony-v6-xl` | `ponyDiffusionV6XL_v6StartWithThisOne.safetensors` | 獣人・異種族 |
 | `noobai-xl-1.1` | `NoobAI-XL-v1.1.safetensors` | 実験的な品質候補 |
 
-モデルは自動ダウンロードしない。利用者がComfyUIの`models/checkpoints`へ配置する。各モデルの利用条件はモデルカードを確認する。
+生成プログラムはモデルを自動ダウンロードしない。初回導入時は`setup_local.sh --profile <profile>`で、明示的に選んだ1モデルだけをHugging Faceから取得し、SHA256を検証してComfyUIの`models/checkpoints`へ配置できる。各モデルの利用条件はモデルカードを確認する。
 
 ## 実装仕様
 
@@ -104,7 +104,7 @@ LLMが生成したconceptをそのまま長文promptとして渡さず、profile
 
 ## 対象外
 
-- モデルファイルの自動ダウンロード
+- ベンチマーク実行時にモデルを自動ダウンロードすること（導入時の明示的な1モデル取得は対象）
 - クラウド画像生成API
 - 自動で最終モデルを決定する画像評価AI
 - Hires.fix、アップスケール、ControlNet、LoRAの品質比較

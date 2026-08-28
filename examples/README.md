@@ -23,9 +23,10 @@ model-comparison/
 
 ## 作例を作る
 
-まずはComfyUIに比較対象のcheckpointを1つだけ配置し、次のように少量で実行します。
+`setup_local.sh`で導入した環境なら、まず比較対象のprofileを1つだけ追加します。モデルの利用条件を確認したうえで、次のコマンドを実行してください。
 
 ```bash
+bash setup_local.sh --profile animagine-xl-4.0-opt
 python tools/benchmark_image_models.py \
   --profiles animagine-xl-4.0-opt \
   --cases 1 \

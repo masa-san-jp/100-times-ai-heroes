@@ -34,6 +34,7 @@ class ImageModelProfile:
     notes: str = ""
     source_url: str = ""
     license_name: str = ""
+    model_sha256: str = ""
 
 
 BUILTIN_PROFILES: Dict[str, ImageModelProfile] = {
@@ -151,6 +152,7 @@ def _profile_from_dict(profile_id: str, value: dict) -> ImageModelProfile:
         notes=str(value.get("notes", "")),
         source_url=str(value.get("source_url", "")),
         license_name=str(value.get("license_name", "")),
+        model_sha256=str(value.get("model_sha256", "")),
     )
 
 
