@@ -36,6 +36,10 @@ python harness/test_harness.py
 
 ```
 ollama_hero_gen.py      # 生成パイプライン、CSV、LLMプロバイダー
+setup_local.py          # Ollama、ComfyUI、モデルの初回導入
+setup_local.sh          # macOS/Linux向け導入ラッパー
+run_local.py            # サービス起動と生成実行の統合入口
+run_local.sh            # macOS/Linux向け実行ラッパー
 comfyui_image_gen.py    # localhost ComfyUI APIクライアント
 image_model_profiles.py # 画像モデルprofileとprompt形式
 memory_safety.py        # macOS/Linuxのメモリ安全弁
@@ -51,7 +55,7 @@ harness/
 ```
 
 ## 技術スタック
-- Python 3.9+
+- Python 3.10+（画像生成込み。テキストのみの手動構成は3.9+）
 - Ollama (gpt-oss-20b)
 - ローカルCSV
 - ComfyUI（画像生成時のみ、localhost）

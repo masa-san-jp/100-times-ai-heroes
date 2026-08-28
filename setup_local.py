@@ -90,13 +90,19 @@ def _create_venv(path: Path, *, dry_run: bool) -> Path:
     return executable
 
 
-def _install_project_dependencies(*, dry_run: bool) -> None:
+def _install_project_dependencies(*, include_cloud: bool, dry_run: bool) -> None:
     python = _create_venv(PROJECT_VENV, dry_run=dry_run)
     _run(
         [python, "-m", "pip", "install", "-r", PROJECT_ROOT / "requirements.txt"],
         cwd=PROJECT_ROOT,
         dry_run=dry_run,
     )
+    if include_cloud:
+        _run(
+            [python, "-m", "pip", "install", "-r", PROJECT_ROOT / "requirements-cloud.txt"],
+            cwd=PROJECT_ROOT,
+            dry_run=dry_run,
+        )
 
 
 def _ollama_is_running() -> bool:
@@ -409,6 +415,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     )
     parser.add_argument("--skip-ollama", action="store_true", help="Ollamaの確認とモデル導入を省略")
     parser.add_argument("--skip-images", action="store_true", help="ComfyUIと画像モデルの導入を省略")
+    parser.add_argument("--with-cloud", action="store_true", help="任意のOpenAI provider用依存関係も導入する")
     parser.add_argument("--yes", action="store_true", help="大容量ダウンロードなどの確認に自動承認する")
     parser.add_argument("--dry-run", action="store_true", help="変更せず、実行予定の処理だけ表示する")
     return parser.parse_args(argv)
@@ -423,7 +430,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.dry_run:
             print("DRY RUN: files and external services will not be changed")
 
-        _install_project_dependencies(dry_run=args.dry_run)
+        _install_project_dependencies(include_cloud=args.with_cloud, dry_run=args.dry_run)
 
         if not args.skip_ollama:
             _ensure_ollama_command(dry_run=args.dry_run, assume_yes=args.yes)
