@@ -150,6 +150,12 @@ python3 setup_local.py --dry-run
 python3 setup_local.py --comfyui-dir /path/to/ComfyUI
 ```
 
+`--comfyui-dir` に既定の `.runtime/ComfyUI` 以外を指定すると、ComfyUI用の仮想環境もその親ディレクトリの `comfyui-venv` に作成されます。仮想環境の場所は `COMFYUI_VENV` または `--comfyui-venv` で明示指定できます。
+
+```bash
+python3 setup_local.py --comfyui-dir /path/to/ComfyUI --comfyui-venv /path/to/comfyui-venv
+```
+
 使用する画像モデルを変更する場合は、profileを1つだけ指定します。候補を全て自動取得することはありません。
 
 ```bash

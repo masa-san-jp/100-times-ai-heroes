@@ -23,12 +23,17 @@ import venv
 from pathlib import Path
 from typing import Iterable, Optional, Sequence
 
+from comfyui_config import (
+    DEFAULT_COMFYUI_DIR as DEFAULT_COMFYUI_DIR_RELATIVE,
+    resolve_comfyui_dir,
+    resolve_comfyui_venv,
+)
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 RUNTIME_DIR = PROJECT_ROOT / ".runtime"
 PROJECT_VENV = PROJECT_ROOT / ".venv"
-DEFAULT_COMFYUI_DIR = RUNTIME_DIR / "ComfyUI"
-DEFAULT_COMFYUI_VENV = RUNTIME_DIR / "comfyui-venv"
+DEFAULT_COMFYUI_DIR = PROJECT_ROOT / DEFAULT_COMFYUI_DIR_RELATIVE
 COMFYUI_REPOSITORY = "https://github.com/Comfy-Org/ComfyUI.git"
 DEFAULT_LLM_MODEL = "gpt-oss:20b"
 DEFAULT_IMAGE_PROFILE = "animagine-xl-4.0-opt"
@@ -219,8 +224,12 @@ def _ensure_comfyui_checkout(path: Path, *, dry_run: bool) -> None:
     _run(["git", "clone", "--depth", "1", COMFYUI_REPOSITORY, path], dry_run=dry_run)
 
 
-def _ensure_comfyui_dependencies(path: Path, *, dry_run: bool) -> Path:
-    python = _create_venv(DEFAULT_COMFYUI_VENV, dry_run=dry_run)
+def _ensure_comfyui_dependencies(
+    path: Path, *, venv_dir: Optional[Path] = None, dry_run: bool
+) -> Path:
+    venv_dir = venv_dir or resolve_comfyui_venv(PROJECT_ROOT, path)
+    print(f"ComfyUI virtual environment: {venv_dir}")
+    python = _create_venv(venv_dir, dry_run=dry_run)
     _run([python, "-m", "pip", "install", "--upgrade", "pip"], dry_run=dry_run)
 
     # The official ComfyUI guidance recommends a current PyTorch nightly for
@@ -356,7 +365,7 @@ def _download_model(profile, destination: Path, *, assume_yes: bool, dry_run: bo
     print(f"OK: image model installed: {destination}")
 
 
-def _update_env(profile_id: str, comfyui_dir: Path) -> None:
+def _update_env(profile_id: str, comfyui_dir: Path, comfyui_venv: Path) -> None:
     env_path = PROJECT_ROOT / ".env"
     template_path = PROJECT_ROOT / ".env.example"
     if not env_path.exists():
@@ -367,6 +376,7 @@ def _update_env(profile_id: str, comfyui_dir: Path) -> None:
         "COMFYUI_MODEL_PROFILE": profile_id,
         "COMFYUI_CHECKPOINT_NAME": "",
         "COMFYUI_DIR": str(comfyui_dir),
+        "COMFYUI_VENV": str(comfyui_venv),
     }
     lines = env_path.read_text(encoding="utf-8").splitlines()
     seen = set()
@@ -410,8 +420,14 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--comfyui-dir",
         type=Path,
-        default=Path(os.getenv("COMFYUI_DIR", str(DEFAULT_COMFYUI_DIR))),
+        default=os.getenv("COMFYUI_DIR") or None,
         help="ComfyUI本体の導入先",
+    )
+    parser.add_argument(
+        "--comfyui-venv",
+        type=Path,
+        default=os.getenv("COMFYUI_VENV") or None,
+        help="ComfyUI用Python仮想環境の導入先",
     )
     parser.add_argument("--skip-ollama", action="store_true", help="Ollamaの確認とモデル導入を省略")
     parser.add_argument("--skip-images", action="store_true", help="ComfyUIと画像モデルの導入を省略")
@@ -443,9 +459,18 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             print("SKIP: ComfyUI and image model")
         else:
             profile = _load_profile(args.profile)
-            comfyui_dir = args.comfyui_dir.expanduser().resolve()
+            comfyui_dir = resolve_comfyui_dir(PROJECT_ROOT, args.comfyui_dir)
+            comfyui_venv = resolve_comfyui_venv(
+                PROJECT_ROOT,
+                comfyui_dir,
+                args.comfyui_venv,
+            )
             _ensure_comfyui_checkout(comfyui_dir, dry_run=args.dry_run)
-            _ensure_comfyui_dependencies(comfyui_dir, dry_run=args.dry_run)
+            _ensure_comfyui_dependencies(
+                comfyui_dir,
+                venv_dir=comfyui_venv,
+                dry_run=args.dry_run,
+            )
             destination = comfyui_dir / "models" / "checkpoints" / profile.checkpoint_name
             _download_model(
                 profile,
@@ -454,7 +479,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 dry_run=args.dry_run,
             )
             if not args.dry_run:
-                _update_env(args.profile, comfyui_dir)
+                _update_env(args.profile, comfyui_dir, comfyui_venv)
 
         if args.skip_images and not args.dry_run:
             _ensure_env_file()

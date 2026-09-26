@@ -11,7 +11,46 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import setup_local  # noqa: E402
+from comfyui_config import resolve_comfyui_dir, resolve_comfyui_venv  # noqa: E402
 from image_model_profiles import get_image_model_profile  # noqa: E402
+
+
+def test_comfyui_venv_default_keeps_legacy_in_repo_path(tmp_path):
+    comfyui_dir = resolve_comfyui_dir(tmp_path)
+
+    assert resolve_comfyui_venv(tmp_path, comfyui_dir) == (
+        tmp_path / ".runtime" / "comfyui-venv"
+    ).resolve()
+
+
+def test_comfyui_venv_default_is_sibling_for_external_comfyui(tmp_path):
+    comfyui_dir = resolve_comfyui_dir(tmp_path, "~/ComfyUI")
+
+    assert resolve_comfyui_venv(tmp_path, comfyui_dir) == (
+        comfyui_dir.parent / "comfyui-venv"
+    ).resolve()
+
+
+def test_comfyui_venv_explicit_env_and_cli_overrides(monkeypatch, tmp_path):
+    monkeypatch.setenv("COMFYUI_VENV", "relative/env-venv")
+    env_args = setup_local.parse_args([])
+    cli_args = setup_local.parse_args(["--comfyui-venv", "relative/cli-venv"])
+    comfyui_dir = resolve_comfyui_dir(tmp_path, "external/ComfyUI")
+
+    assert resolve_comfyui_venv(tmp_path, comfyui_dir, env_args.comfyui_venv) == (
+        tmp_path / "relative" / "env-venv"
+    ).resolve()
+    assert resolve_comfyui_venv(tmp_path, comfyui_dir, cli_args.comfyui_venv) == (
+        tmp_path / "relative" / "cli-venv"
+    ).resolve()
+
+
+def test_comfyui_paths_expand_user_and_repo_relative_values(tmp_path):
+    comfyui_dir = resolve_comfyui_dir(tmp_path, "relative/ComfyUI")
+    comfyui_venv = resolve_comfyui_venv(tmp_path, comfyui_dir, "relative/venv")
+
+    assert comfyui_dir == (tmp_path / "relative" / "ComfyUI").resolve()
+    assert comfyui_venv == (tmp_path / "relative" / "venv").resolve()
 
 
 def test_download_metadata_exists_for_all_comparison_profiles():

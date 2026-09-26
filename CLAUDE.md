@@ -41,6 +41,7 @@ setup_local.sh          # macOS/Linux向け導入ラッパー
 run_local.py            # サービス起動と生成実行の統合入口
 run_local.sh            # macOS/Linux向け実行ラッパー
 comfyui_image_gen.py    # localhost ComfyUI APIクライアント
+comfyui_config.py       # ComfyUI本体と仮想環境のパス解決（setup/run共通）
 image_model_profiles.py # 画像モデルprofileとprompt形式
 memory_safety.py        # macOS/Linuxのメモリ安全弁
 tools/benchmark_image_models.py # 候補モデル比較ベンチマーク
