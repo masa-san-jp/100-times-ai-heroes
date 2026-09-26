@@ -584,9 +584,41 @@ class LocalStorage:
         self, row: List[Any], seed_updates: Dict[str, str]
     ) -> None:
         """生成済みの1キャラクターを保存する。生成途中では呼び出さない。"""
-        self.append_output(row)
-        for attr_type in ("ability", "wants", "role"):
-            self.append_seed(attr_type, seed_updates[attr_type])
+        rollback_targets = [
+            (self.output_file, self.output_file.stat().st_size),
+            *(
+                (self.seed_files[attr_type], self.seed_files[attr_type].stat().st_size)
+                for attr_type in ("ability", "wants", "role")
+            ),
+        ]
+        seed_lengths = {
+            attr_type: len(self._seed_values[attr_type])
+            for attr_type in ("ability", "wants", "role")
+        }
+
+        try:
+            self.append_output(row)
+            for attr_type in ("ability", "wants", "role"):
+                self.append_seed(attr_type, seed_updates[attr_type])
+        except BaseException as original_error:
+            # BaseException: Ctrl+C during the write must not leave partial rows.
+            rollback_failures = []
+            for path, size in rollback_targets:
+                try:
+                    with path.open("r+b") as file:
+                        file.truncate(size)
+                except Exception:
+                    rollback_failures.append(str(path))
+
+            for attr_type, length in seed_lengths.items():
+                del self._seed_values[attr_type][length:]
+
+            if rollback_failures:
+                paths = ", ".join(rollback_failures)
+                raise RuntimeError(
+                    f"Commit rollback failed; manually check: {paths}"
+                ) from original_error
+            raise
 
     def record_error(
         self,

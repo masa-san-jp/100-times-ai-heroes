@@ -330,6 +330,177 @@ def test_generation_writes_csv_and_expands_seeds(tmp_path):
     assert "New role" in storage._seed_values["role"]
 
 
+def test_commit_rolls_back_when_second_seed_append_fails(monkeypatch, tmp_path):
+    storage = LocalStorage(make_config(tmp_path))
+    row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
+        "value"
+    ] * 6 + ["", ""]
+    seed_updates = {
+        "ability": "New ability",
+        "wants": "New wants",
+        "role": "New role",
+    }
+    paths = [storage.output_file, *storage.seed_files.values()]
+    files_before = {path: path.read_bytes() for path in paths}
+    seeds_before = {
+        attr_type: list(storage._seed_values[attr_type])
+        for attr_type in ("ability", "wants", "role")
+    }
+    original_error = OSError("wants write failed")
+    original_append_seed = storage.append_seed
+
+    def fail_on_wants(attr_type, value):
+        if attr_type == "wants":
+            raise original_error
+        return original_append_seed(attr_type, value)
+
+    monkeypatch.setattr(storage, "append_seed", fail_on_wants)
+
+    with pytest.raises(OSError) as error:
+        storage.commit_character(row, seed_updates)
+
+    assert error.value is original_error
+    assert {path: path.read_bytes() for path in paths} == files_before
+    assert {
+        attr_type: storage._seed_values[attr_type]
+        for attr_type in seeds_before
+    } == seeds_before
+
+
+def test_commit_rolls_back_on_keyboard_interrupt(monkeypatch, tmp_path):
+    storage = LocalStorage(make_config(tmp_path))
+    row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
+        "value"
+    ] * 6 + ["", ""]
+    paths = [storage.output_file, *storage.seed_files.values()]
+    files_before = {path: path.read_bytes() for path in paths}
+    original_append_seed = storage.append_seed
+
+    def interrupt_on_role(attr_type, value):
+        if attr_type == "role":
+            raise KeyboardInterrupt
+        return original_append_seed(attr_type, value)
+
+    monkeypatch.setattr(storage, "append_seed", interrupt_on_role)
+
+    with pytest.raises(KeyboardInterrupt):
+        storage.commit_character(
+            row, {"ability": "A", "wants": "W", "role": "R"}
+        )
+
+    assert {path: path.read_bytes() for path in paths} == files_before
+
+
+def test_commit_rolls_back_when_output_append_fails(monkeypatch, tmp_path):
+    storage = LocalStorage(make_config(tmp_path))
+    row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
+        "value"
+    ] * 6 + ["", ""]
+    seed_updates = {
+        "ability": "New ability",
+        "wants": "New wants",
+        "role": "New role",
+    }
+    paths = [storage.output_file, *storage.seed_files.values()]
+    files_before = {path: path.read_bytes() for path in paths}
+    original_error = OSError("output write failed")
+
+    def fail_output(_row):
+        with storage.output_file.open("ab") as file:
+            file.write(b"partial output")
+        raise original_error
+
+    monkeypatch.setattr(storage, "append_output", fail_output)
+
+    with pytest.raises(OSError) as error:
+        storage.commit_character(row, seed_updates)
+
+    assert error.value is original_error
+    assert {path: path.read_bytes() for path in paths} == files_before
+
+
+def test_commit_rollback_failure_raises_runtime_error_with_original_cause(
+    monkeypatch, tmp_path
+):
+    storage = LocalStorage(make_config(tmp_path))
+    row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
+        "value"
+    ] * 6 + ["", ""]
+    seed_updates = {
+        "ability": "New ability",
+        "wants": "New wants",
+        "role": "New role",
+    }
+    original_error = OSError("wants write failed")
+    original_append_seed = storage.append_seed
+    real_path_open = Path.open
+
+    def fail_on_wants(attr_type, value):
+        if attr_type == "wants":
+            raise original_error
+        return original_append_seed(attr_type, value)
+
+    def fail_ability_rollback(path, mode="r", *args, **kwargs):
+        if path == storage.seed_files["ability"] and mode == "r+b":
+            raise PermissionError("ability rollback failed")
+        return real_path_open(path, mode, *args, **kwargs)
+
+    monkeypatch.setattr(storage, "append_seed", fail_on_wants)
+    monkeypatch.setattr(Path, "open", fail_ability_rollback)
+
+    with pytest.raises(RuntimeError) as error:
+        storage.commit_character(row, seed_updates)
+
+    assert str(storage.seed_files["ability"]) in str(error.value)
+    assert error.value.__cause__ is original_error
+
+
+def test_generation_persistence_failure_on_second_iteration_is_recorded(
+    monkeypatch, tmp_path
+):
+    responses = []
+    for index in range(2):
+        responses.extend(
+            [
+                f"Concept {index}",
+                f"Name {index}",
+                f"Profile {index}",
+                f"Catchphrase {index}",
+                f"Ability {index}",
+                f"Want {index}",
+                f"Role {index}",
+            ]
+        )
+    config = make_config(tmp_path, num_iterations=2)
+    storage = LocalStorage(config)
+    original_commit = storage.commit_character
+    commit_calls = 0
+    original_error = OSError("persistence failed")
+
+    def fail_second_commit(row, seed_updates):
+        nonlocal commit_calls
+        commit_calls += 1
+        if commit_calls == 2:
+            raise original_error
+        return original_commit(row, seed_updates)
+
+    monkeypatch.setattr(storage, "commit_character", fail_second_commit)
+
+    with pytest.raises(StageError) as error:
+        generate_characters(
+            config,
+            text_generator=FakeTextGenerator(responses=responses),
+            storage=storage,
+        )
+
+    assert error.value.stage == "persistence"
+    event = json.loads(storage.errors_file.read_text(encoding="utf-8").splitlines()[0])
+    assert event["iteration"] == 2
+    assert event["stage"] == "persistence"
+    with storage.output_file.open(newline="", encoding="utf-8") as file:
+        assert len(list(csv.reader(file))) == 2
+
+
 def test_generation_loop_writes_requested_number(tmp_path):
     responses = []
     for index in range(2):
