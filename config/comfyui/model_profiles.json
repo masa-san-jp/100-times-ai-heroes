@@ -75,6 +75,44 @@
       "source_url": "https://huggingface.co/Laxhar/noobai-XL-1.1",
       "license_name": "Fair AI Public License 1.0-SD",
       "model_sha256": "6681e8e4b134c81f16533acedb0d406d7e5e366e1624b4105178c64d00b05d51"
+    },
+    "qwen-image-2.1": {
+      "checkpoint_name": "qwen_image_2.1_bf16.safetensors",
+      "prompt_style": "natural",
+      "width": 896,
+      "height": 1152,
+      "steps": 25,
+      "cfg": 1.0,
+      "sampler": "euler",
+      "scheduler": "simple",
+      "negative_prompt": "",
+      "experimental": true,
+      "notes": "Qwen-Image 2.1の実験的な比較候補。",
+      "license_note": "Qwen Research License: 研究・評価目的のみ。商用利用は別途契約が必要",
+      "workflow_path": "config/comfyui/qwen_image_2_1_t2i_api_workflow.json",
+      "model_files": [
+        {
+          "subdir": "diffusion_models",
+          "filename": "qwen_image_2.1_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_bf16.safetensors",
+          "sha256": "89f4158d066cc33906a199fca85634f766892dd78f49b6698dabf187ac86c4bc",
+          "size": "14.23GB"
+        },
+        {
+          "subdir": "text_encoders",
+          "filename": "qwen3vl_8b_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_bf16.safetensors",
+          "sha256": "68bdc82bc1b66851162ae656225e7e2068166b603db19bd5d5a3b90eb12669a9",
+          "size": "17.53GB"
+        },
+        {
+          "subdir": "vae",
+          "filename": "qwen_image_2.1_vae_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/vae/qwen_image_2.1_vae_bf16.safetensors",
+          "sha256": "bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9",
+          "size": "0.68GB"
+        }
+      ]
     }
   }
 }

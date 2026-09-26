@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import csv
+import copy
 import json
 import sys
 from pathlib import Path
@@ -23,6 +24,7 @@ from comfyui_image_gen import (  # noqa: E402
     ComfyUITimeoutError,
     ComfyUIImageGenerator,
     GeneratedImage,
+    WORKFLOW_CONFIGS,
 )
 from image_model_profiles import (  # noqa: E402
     build_image_prompt,
@@ -112,6 +114,19 @@ def test_config_defaults_and_env(monkeypatch, tmp_path):
     assert config.generate_images is False
 
 
+def test_blank_workflow_path_uses_selected_profile_workflow(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app, "load_dotenv", lambda: None)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("COMFYUI_MODEL_PROFILES_PATH", str(PROJECT_ROOT / "config/comfyui/model_profiles.json"))
+    monkeypatch.setenv("COMFYUI_MODEL_PROFILE", "qwen-image-2.1")
+    monkeypatch.setenv("COMFYUI_WORKFLOW_PATH", "")
+
+    config = Config.from_env()
+
+    assert config.comfyui_workflow_path.endswith("qwen_image_2_1_t2i_api_workflow.json")
+
+
 def test_image_model_profiles_cover_comparison_candidates(tmp_path):
     profile_ids = [
         "animagine-xl-4.0-opt",
@@ -146,6 +161,37 @@ def test_model_profile_prompt_uses_project_attributes(tmp_path):
     assert prompt.startswith("1girl, solo, full body")
     assert "Sound Cartographer" in prompt
     assert "A guardian who turns noise into music." in prompt
+
+
+def test_qwen_profile_uses_bf16_files_and_natural_prompt():
+    profile = get_image_model_profile(
+        "qwen-image-2.1",
+        PROJECT_ROOT / "config" / "comfyui" / "model_profiles.json",
+    )
+
+    assert profile.experimental is True
+    assert profile.workflow_path.endswith("qwen_image_2_1_t2i_api_workflow.json")
+    assert [model_file.filename for model_file in profile.model_files] == [
+        "qwen_image_2.1_bf16.safetensors",
+        "qwen3vl_8b_bf16.safetensors",
+        "qwen_image_2.1_vae_bf16.safetensors",
+    ]
+    prompt = build_image_prompt(
+        profile,
+        concept="A guardian who turns noise into music",
+        age="young adult",
+        gender="female",
+        species="human",
+        ability="Can transform digital noise into music",
+        role="Sound Cartographer",
+    )
+    assert "young adult female human" in prompt
+    assert "Sound Cartographer" in prompt
+    assert "Can transform digital noise into music" in prompt
+    assert "full body" in prompt.lower()
+    assert "single character" in prompt.lower()
+    assert "plain white background" in prompt.lower()
+    assert "no text or watermark" in prompt.lower()
 
 
 def test_ollama_model_missing_does_not_pull(tmp_path):
@@ -726,6 +772,39 @@ def test_comfyui_history_timeout_uses_injected_clock(tmp_path):
         generator._wait_for_history("abc")
 
 
+def _sdxl_workflow_without(tmp_path, *missing):
+    source = PROJECT_ROOT / "config/comfyui/text2image_api_workflow.json"
+    workflow = json.loads(source.read_text(encoding="utf-8"))
+    for node_id in missing:
+        workflow.pop(node_id)
+    path = tmp_path / "custom_workflow.json"
+    path.write_text(json.dumps(workflow), encoding="utf-8")
+    return path
+
+
+def test_custom_workflow_is_still_validated_as_sdxl(tmp_path):
+    generator = ComfyUIImageGenerator(
+        base_url="http://127.0.0.1:8188",
+        workflow_path=_sdxl_workflow_without(tmp_path, "6"),
+        checkpoint_name="model.safetensors",
+    )
+
+    with pytest.raises(ComfyUIConfigurationError):
+        generator._build_workflow("prompt", 1)
+
+
+def test_clip_skip_without_clip_node_raises(tmp_path):
+    generator = ComfyUIImageGenerator(
+        base_url="http://127.0.0.1:8188",
+        workflow_path=_sdxl_workflow_without(tmp_path, "11"),
+        checkpoint_name="model.safetensors",
+        clip_skip=-2,
+    )
+
+    with pytest.raises(ComfyUIConfigurationError, match="CLIPSetLastLayer"):
+        generator._build_workflow("prompt", 1)
+
+
 def test_comfyui_profile_can_apply_clip_skip(tmp_path):
     workflow_path = tmp_path / "workflow.json"
     workflow_path.write_text(
@@ -755,6 +834,80 @@ def test_comfyui_profile_can_apply_clip_skip(tmp_path):
     assert workflow["11"]["inputs"]["stop_at_clip_layer"] == -2
     assert workflow["6"]["inputs"]["clip"] == ["11", 0]
     assert workflow["7"]["inputs"]["clip"] == ["11", 0]
+
+
+def test_comfyui_sdxl_generalized_path_matches_legacy_node_updates():
+    workflow_path = PROJECT_ROOT / "config" / "comfyui" / "text2image_api_workflow.json"
+    generator = ComfyUIImageGenerator(
+        base_url="http://127.0.0.1:8188",
+        workflow_path=workflow_path,
+        checkpoint_name="pony.safetensors",
+        width=832,
+        height=1216,
+        steps=25,
+        cfg=7.0,
+        sampler="euler_ancestral",
+        scheduler="normal",
+        negative_prompt="legacy negative",
+        clip_skip=-2,
+    )
+
+    original = json.loads(workflow_path.read_text(encoding="utf-8"))
+    expected = copy.deepcopy(original)
+    expected["4"]["inputs"]["ckpt_name"] = "pony.safetensors"
+    expected["6"]["inputs"]["text"] = "A hero"
+    expected["7"]["inputs"]["text"] = "legacy negative"
+    expected["11"]["inputs"]["stop_at_clip_layer"] = -2
+    expected["6"]["inputs"]["clip"] = ["11", 0]
+    expected["7"]["inputs"]["clip"] = ["11", 0]
+    expected["5"]["inputs"].update(
+        {
+            "seed": 42,
+            "steps": 25,
+            "cfg": 7.0,
+            "sampler_name": "euler_ancestral",
+            "scheduler": "normal",
+        }
+    )
+    expected["8"]["inputs"].update(
+        {"width": 832, "height": 1216, "batch_size": 1}
+    )
+
+    assert generator._build_workflow("A hero", 42) == expected
+
+
+def test_comfyui_qwen_workflow_injects_all_profile_model_files():
+    profile = get_image_model_profile(
+        "qwen-image-2.1",
+        PROJECT_ROOT / "config" / "comfyui" / "model_profiles.json",
+    )
+    generator = ComfyUIImageGenerator(
+        base_url="http://127.0.0.1:8188",
+        workflow_path=PROJECT_ROOT / profile.workflow_path,
+        checkpoint_name=profile.checkpoint_name,
+        width=profile.width,
+        height=profile.height,
+        steps=profile.steps,
+        cfg=profile.cfg,
+        sampler=profile.sampler,
+        scheduler=profile.scheduler,
+        negative_prompt=profile.negative_prompt,
+        model_files=profile.model_files,
+    )
+
+    workflow = generator._build_workflow("A hero", 42)
+
+    assert workflow["1"]["inputs"]["unet_name"] == "qwen_image_2.1_bf16.safetensors"
+    assert workflow["2"]["inputs"]["clip_name"] == "qwen3vl_8b_bf16.safetensors"
+    assert workflow["3"]["inputs"]["vae_name"] == "qwen_image_2.1_vae_bf16.safetensors"
+    assert workflow["4"]["inputs"]["prompt"] == "A hero"
+    assert workflow["4"]["inputs"]["negative_prompt"] == ""
+    assert workflow["5"]["inputs"]["width"] == 896
+    assert workflow["5"]["inputs"]["height"] == 1152
+    assert workflow["6"]["inputs"]["seed"] == 42
+    assert workflow["6"]["inputs"]["steps"] == 25
+    assert workflow["6"]["inputs"]["cfg"] == 1.0
+    assert "clip_skip" not in WORKFLOW_CONFIGS["qwen_image_2_1_t2i_api_workflow.json"]["injections"]
 
 
 def test_comfyui_free_memory_calls_local_endpoint(tmp_path):

@@ -4,15 +4,27 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 
 DEFAULT_NEGATIVE_PROMPT = (
     "low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, "
     "duplicate, text, watermark, signature"
 )
+DEFAULT_WORKFLOW_PATH = "config/comfyui/text2image_api_workflow.json"
+
+
+@dataclass(frozen=True)
+class ImageModelFile:
+    """A model file installed below ComfyUI's models directory."""
+
+    subdir: str
+    filename: str
+    url: str
+    sha256: str
+    size: str
 
 
 @dataclass(frozen=True)
@@ -35,6 +47,9 @@ class ImageModelProfile:
     source_url: str = ""
     license_name: str = ""
     model_sha256: str = ""
+    workflow_path: str = DEFAULT_WORKFLOW_PATH
+    model_files: List[ImageModelFile] = field(default_factory=list)
+    license_note: str = ""
 
 
 BUILTIN_PROFILES: Dict[str, ImageModelProfile] = {
@@ -153,7 +168,41 @@ def _profile_from_dict(profile_id: str, value: dict) -> ImageModelProfile:
         source_url=str(value.get("source_url", "")),
         license_name=str(value.get("license_name", "")),
         model_sha256=str(value.get("model_sha256", "")),
+        workflow_path=str(value.get("workflow_path", DEFAULT_WORKFLOW_PATH)),
+        model_files=[
+            ImageModelFile(
+                subdir=str(model_file["subdir"]),
+                filename=str(model_file["filename"]),
+                url=str(model_file["url"]),
+                sha256=str(model_file["sha256"]),
+                size=str(model_file["size"]),
+            )
+            for model_file in _parse_model_files(profile_id, value.get("model_files", []))
+        ],
+        license_note=str(value.get("license_note", "")),
     )
+
+
+def _parse_model_files(profile_id: str, value: object) -> List[dict]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"Image model profile {profile_id} model_files must be a list")
+    required = {"subdir", "filename", "url", "sha256", "size"}
+    parsed = []
+    for index, model_file in enumerate(value):
+        if not isinstance(model_file, dict):
+            raise ValueError(
+                f"Image model profile {profile_id} model_files[{index}] must be an object"
+            )
+        missing = sorted(required - model_file.keys())
+        if missing:
+            raise ValueError(
+                f"Image model profile {profile_id} model_files[{index}] is missing: "
+                f"{', '.join(missing)}"
+            )
+        parsed.append(model_file)
+    return parsed
 
 
 def load_image_model_profiles(path: Optional[Path] = None) -> Dict[str, ImageModelProfile]:
@@ -221,6 +270,34 @@ def build_image_prompt(
     role: str = "",
 ) -> str:
     """プロファイルごとのprompt形式で、全身キャラクター向けpromptを作る。"""
+    if profile.prompt_style == "natural":
+        attributes = [
+            _compact(age),
+            _compact(gender),
+            _compact(species),
+        ]
+        subject = " ".join(value for value in attributes if value)
+        subject = f"{subject} character" if subject else "character"
+        article = "an" if subject[0].lower() in "aeiou" else "a"
+        role_text = _compact(role)
+        ability_text = _compact(ability)
+        concept_text = _compact(concept)
+        sentences = [
+            f"{article.capitalize()} {subject} whose role is {role_text}"
+            if role_text
+            else f"{article.capitalize()} {subject}",
+        ]
+        if ability_text:
+            sentences[0] += f" and whose ability is {ability_text}"
+        sentences[0] += "."
+        if concept_text:
+            sentences.append(f"The character is based on the concept: {concept_text}.")
+        sentences.append(
+            "Full body, single character, plain white background, anime illustration style, "
+            "no text or watermark."
+        )
+        return " ".join(sentences)
+
     if profile.prompt_style == "prose":
         return (
             "The full-length character illustration from video games, likely from "

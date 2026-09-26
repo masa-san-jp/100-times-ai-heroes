@@ -286,8 +286,11 @@ python3 run_local.py --iterations 1 --generate-images
 | `illustrious-xl-v2` | 線・色を重視するイラスト | `Illustrious-XL-v2.0.safetensors` |
 | `pony-v6-xl` | 獣人・異種族 | `ponyDiffusionV6XL_v6StartWithThisOne.safetensors` |
 | `noobai-xl-1.1` | 実験的な品質候補 | `NoobAI-XL-v1.1.safetensors` |
+| `qwen-image-2.1` | 実験的な比較候補（研究・評価目的のみ） | diffusion model / text encoder / VAE（約32GB） |
 
-モデルを1つに決める前に、同一の固定seedで候補を比較できます。既定では3ケース×2seed×4モデルを実行します。
+Qwen-Image 2.1は実験的な候補です。Qwen Research Licenseにより研究・評価目的のみの利用で、商用利用には別途契約が必要です。3つのモデルファイルを合わせて、およそ32GBのダウンロードが必要です。
+
+モデルを1つに決める前に、同一の固定seedで候補を比較できます。既定では3ケース×2seed×5モデルを実行します。
 
 ```bash
 # ComfyUIへ接続せず、profileとpromptだけ検証

@@ -37,18 +37,81 @@ class GeneratedImage:
     seed: int
 
 
+SDXL_REQUIRED_NODES = {
+    "4": "CheckpointLoaderSimple",
+    "5": "KSampler",
+    "6": "CLIPTextEncode",
+    "7": "CLIPTextEncode",
+    "8": "EmptyLatentImage",
+    "9": "VAEDecode",
+    "10": "SaveImage",
+}
+
+SDXL_INJECTIONS = {
+    "model": {"node": "4", "input": "ckpt_name"},
+    "positive_prompt": {"node": "6", "input": "text"},
+    "negative_prompt": {"node": "7", "input": "text"},
+    "seed": {"node": "5", "input": "seed"},
+    "steps": {"node": "5", "input": "steps"},
+    "cfg": {"node": "5", "input": "cfg"},
+    "sampler": {"node": "5", "input": "sampler_name"},
+    "scheduler": {"node": "5", "input": "scheduler"},
+    "width": {"node": "8", "input": "width"},
+    "height": {"node": "8", "input": "height"},
+    "batch_size": {"node": "8", "input": "batch_size"},
+    "clip_skip": {
+        "node": "11",
+        "input": "stop_at_clip_layer",
+        "connections": [
+            {"node": "6", "input": "clip"},
+            {"node": "7", "input": "clip"},
+        ],
+    },
+}
+
+WORKFLOW_CONFIGS = {
+    "text2image_api_workflow.json": {
+        "required_nodes": SDXL_REQUIRED_NODES,
+        "injections": SDXL_INJECTIONS,
+    },
+    "qwen_image_2_1_t2i_api_workflow.json": {
+        "required_nodes": {
+            "1": "UNETLoader",
+            "2": "CLIPLoader",
+            "3": "VAELoader",
+            "4": "TextEncodeQwenImage21",
+            "5": "EmptyLatentImage",
+            "6": "KSampler",
+            "7": "VAEDecode",
+            "8": "QwenImage21Cache",
+            "9": "SaveImageAdvanced",
+        },
+        "injections": {
+            "positive_prompt": {"node": "4", "input": "prompt"},
+            "negative_prompt": {"node": "4", "input": "negative_prompt"},
+            "seed": {"node": "6", "input": "seed"},
+            "steps": {"node": "6", "input": "steps"},
+            "cfg": {"node": "6", "input": "cfg"},
+            "sampler": {"node": "6", "input": "sampler_name"},
+            "scheduler": {"node": "6", "input": "scheduler"},
+            "width": {"node": "5", "input": "width"},
+            "height": {"node": "5", "input": "height"},
+            "batch_size": {"node": "5", "input": "batch_size"},
+            "model_files": {
+                "diffusion_models": {"node": "1", "input": "unet_name"},
+                "text_encoders": {"node": "2", "input": "clip_name"},
+                "vae": {"node": "3", "input": "vae_name"},
+            },
+        },
+    },
+}
+
+
 class ComfyUIImageGenerator:
     """ComfyUI API workflowを使って画像を生成する。"""
 
-    REQUIRED_NODES = {
-        "4": "CheckpointLoaderSimple",
-        "5": "KSampler",
-        "6": "CLIPTextEncode",
-        "7": "CLIPTextEncode",
-        "8": "EmptyLatentImage",
-        "9": "VAEDecode",
-        "10": "SaveImage",
-    }
+    # Kept as a public compatibility alias for callers that used the old SDXL map.
+    REQUIRED_NODES = SDXL_REQUIRED_NODES
 
     def __init__(
         self,
@@ -64,6 +127,7 @@ class ComfyUIImageGenerator:
         sampler: str = "euler",
         scheduler: str = "normal",
         clip_skip: Optional[int] = None,
+        model_files: Optional[list[Any]] = None,
         negative_prompt: str = (
             "low quality, blurry, distorted hands, extra fingers, cropped, duplicate"
         ),
@@ -99,11 +163,27 @@ class ComfyUIImageGenerator:
         self.sampler = sampler
         self.scheduler = scheduler
         self.clip_skip = clip_skip
+        self.model_files = list(model_files or [])
         self.negative_prompt = negative_prompt
         self.opener = opener or urllib.request.urlopen
         self.clock = clock
         self.sleeper = sleeper
         self.seed_factory = seed_factory
+
+    def _workflow_config(self) -> Dict[str, Any]:
+        # Unregistered (custom) workflows are treated as SDXL and validated as such.
+        return WORKFLOW_CONFIGS.get(
+            self.workflow_path.name,
+            {"required_nodes": SDXL_REQUIRED_NODES, "injections": SDXL_INJECTIONS},
+        )
+
+    def _require_input(
+        self, workflow: Dict[str, Any], target: Optional[Dict[str, str]], value: Any, role: str
+    ) -> None:
+        if not self._set_input(workflow, target, value):
+            raise ComfyUIConfigurationError(
+                f"Workflow {self.workflow_path.name} has no injection target for {role}"
+            )
 
     def _url(self, path: str) -> str:
         return f"{self.base_url}/{path.lstrip('/')}"
@@ -173,7 +253,7 @@ class ComfyUIImageGenerator:
 
         if not isinstance(workflow, dict):
             raise ComfyUIConfigurationError("ComfyUI workflow must be a JSON object")
-        for node_id, class_type in self.REQUIRED_NODES.items():
+        for node_id, class_type in self._workflow_config()["required_nodes"].items():
             node = workflow.get(node_id)
             if not isinstance(node, dict) or node.get("class_type") != class_type:
                 raise ComfyUIConfigurationError(
@@ -181,33 +261,81 @@ class ComfyUIImageGenerator:
                 )
         return workflow
 
+    @staticmethod
+    def _set_input(
+        workflow: Dict[str, Any], target: Optional[Dict[str, str]], value: Any
+    ) -> bool:
+        if not target:
+            return False
+        node = workflow.get(str(target.get("node")))
+        if not isinstance(node, dict):
+            return False
+        inputs = node.get("inputs")
+        if not isinstance(inputs, dict):
+            return False
+        input_name = target.get("input")
+        if not input_name:
+            return False
+        inputs[input_name] = value
+        return True
+
+    def _model_file_names(self) -> Dict[str, str]:
+        names = {}
+        for model_file in self.model_files:
+            if isinstance(model_file, dict):
+                subdir = model_file.get("subdir")
+                filename = model_file.get("filename")
+            else:
+                subdir = getattr(model_file, "subdir", None)
+                filename = getattr(model_file, "filename", None)
+            if subdir and filename:
+                names[str(subdir)] = str(filename)
+        return names
+
     def _build_workflow(self, prompt: str, seed: int) -> Dict[str, Any]:
         workflow = copy.deepcopy(self._load_workflow())
-        workflow["4"]["inputs"]["ckpt_name"] = self.checkpoint_name
-        workflow["6"]["inputs"]["text"] = prompt
-        workflow["7"]["inputs"]["text"] = self.negative_prompt
+        injections = self._workflow_config()["injections"]
+        if self.model_files:
+            model_file_names = self._model_file_names()
+            targets = injections.get("model_files", {})
+            for subdir, filename in model_file_names.items():
+                self._require_input(
+                    workflow, targets.get(subdir), filename, f"model file ({subdir})"
+                )
+        else:
+            self._require_input(
+                workflow, injections.get("model"), self.checkpoint_name, "model"
+            )
+
+        values = {
+            "positive_prompt": prompt,
+            "negative_prompt": self.negative_prompt,
+            "seed": seed,
+            "steps": self.steps,
+            "cfg": self.cfg,
+            "sampler": self.sampler,
+            "scheduler": self.scheduler,
+            "width": self.width,
+            "height": self.height,
+            "batch_size": 1,
+        }
+        for role, value in values.items():
+            if role in ("positive_prompt", "seed"):
+                self._require_input(workflow, injections.get(role), value, role)
+            else:
+                self._set_input(workflow, injections.get(role), value)
+
         if self.clip_skip is not None:
-            clip_node = workflow.get("11")
+            clip_target = injections.get("clip_skip")
+            clip_node = workflow.get(str((clip_target or {}).get("node")))
             if not isinstance(clip_node, dict) or clip_node.get("class_type") != "CLIPSetLastLayer":
                 raise ComfyUIConfigurationError(
-                    "The selected image model profile requires workflow node 11 "
-                    "with class_type CLIPSetLastLayer."
+                    "The selected image model profile requires a CLIPSetLastLayer node "
+                    f"for clip skip in {self.workflow_path.name}."
                 )
-            clip_node.setdefault("inputs", {})["stop_at_clip_layer"] = self.clip_skip
-            workflow["6"]["inputs"]["clip"] = ["11", 0]
-            workflow["7"]["inputs"]["clip"] = ["11", 0]
-        workflow["5"]["inputs"].update(
-            {
-                "seed": seed,
-                "steps": self.steps,
-                "cfg": self.cfg,
-                "sampler_name": self.sampler,
-                "scheduler": self.scheduler,
-            }
-        )
-        workflow["8"]["inputs"].update(
-            {"width": self.width, "height": self.height, "batch_size": 1}
-        )
+            self._set_input(workflow, clip_target, self.clip_skip)
+            for connection in clip_target.get("connections", []):
+                self._set_input(workflow, connection, [str(clip_target["node"]), 0])
         return workflow
 
     def _queue(self, workflow: Dict[str, Any]) -> str:

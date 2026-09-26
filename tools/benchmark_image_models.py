@@ -31,6 +31,7 @@ DEFAULT_PROFILE_IDS = [
     "illustrious-xl-v2",
     "pony-v6-xl",
     "noobai-xl-1.1",
+    "qwen-image-2.1",
 ]
 
 BENCHMARK_CASES = [
@@ -107,13 +108,16 @@ def _profile_generator(
     profile: ImageModelProfile,
     *,
     url: str,
-    workflow_path: Path,
+    workflow_path: Optional[Path],
     output_dir: Path,
     seed: int,
 ) -> ComfyUIImageGenerator:
+    selected_workflow = workflow_path or Path(profile.workflow_path)
+    if not selected_workflow.is_absolute():
+        selected_workflow = PROJECT_ROOT / selected_workflow
     return ComfyUIImageGenerator(
         base_url=url,
-        workflow_path=workflow_path,
+        workflow_path=selected_workflow,
         checkpoint_name=profile.checkpoint_name,
         timeout_seconds=300,
         poll_interval_seconds=1,
@@ -125,6 +129,7 @@ def _profile_generator(
         scheduler=profile.scheduler,
         negative_prompt=profile.negative_prompt,
         clip_skip=profile.clip_skip,
+        model_files=profile.model_files,
         seed_factory=lambda seed=seed: seed,
     )
 
@@ -288,7 +293,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--workflow-path",
         type=Path,
-        default=PROJECT_ROOT / "config/comfyui/text2image_api_workflow.json",
+        default=None,
+        help="すべてのprofileで使うworkflow（省略時はprofileのworkflow_path）",
     )
     parser.add_argument(
         "--profiles-path",
@@ -322,5 +328,9 @@ def parse_args() -> argparse.Namespace:
 if __name__ == "__main__":
     arguments = parse_args()
     result = run_benchmark(arguments)
+    if arguments.dry_run:
+        print("Profiles:")
+        for profile in result["profiles"]:
+            print(f"- {profile['profile_id']}: {profile['prompt_style']}")
     print(json.dumps(result["summary"], ensure_ascii=False))
     print(f"Report: {arguments.output / 'report.json'}")
