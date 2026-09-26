@@ -321,6 +321,16 @@ OPENAI_API_KEY=... python3 run_local.py --provider openai --iterations 1
 
 `--provider`を省略した場合はOllamaが使われます。クラウドLLMを使う場合でも、`--generate-images`の画像生成先はlocalhostのComfyUIです。
 
+### 開発者向け: テストの実行
+
+リポジトリルートで次のコマンドを実行すると、依存関係の準備、構文チェック、テストをまとめて実行できます。
+
+```bash
+bash tools/ci.sh
+```
+
+このコマンドはGitHub Actionsだけでなく、GitHub以外のCIやローカル環境でも同じように動作します。
+
 ### License and model terms
 
 このリポジトリには現在 `LICENSE` ファイルがないため、コードの再利用条件は明示されていません。コードを再配布・組み込む場合は、権利者に確認してください。
