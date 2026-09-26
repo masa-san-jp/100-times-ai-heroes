@@ -131,3 +131,29 @@ SESSION: 2026-08-27 - Image model comparison
 - M4 Max上の実画像生成ピークメモリ測定
 
 ================================================================================
+
+SESSION: 2026-09-26 - Improvement issues (Claude review + Codex implementation)
+================================================================================
+
+## 運用
+- Claude が Issue で仕様と受け入れ条件を定義し、Codex（gpt-5.6-luna）が実装、Claude がレビュー・検証・PR作成・rebase マージ
+- このリポジトリは rebase マージのみ許可（squash / merge commit は無効）
+
+## 完了したタスク
+- [x] 実装済みの #5 #6 #9 #11 を根拠付きでクローズ
+- [x] #14 GitHub非依存CI: tools/ci.sh（.venv-ci + compileall + pytest）、Actions は checkout のみ、requirements-dev.txt 分離（PR #16）
+- [x] #7 pytest.ini（integration/slow marker を既定で除外）と不足テスト8件（PR #17）
+- [x] #15 commit_character のロールバック（Ctrl+C を含む）（PR #18）
+- [x] #8 init.sh を .venv と .env に対応し、PEP 668 失敗とモデル名の部分一致を修正 / #19 MIT LICENSE（作品・画像は対象外）（PR #20）
+
+## 判断メモ
+- seed の重複除去は行わない（#9 で意図的に許容。重みとして機能）
+- 旧版 20240916-AI-Art-GP-3-Charactor-v1.0.py は外部リンク保護のためルートに残す
+
+## テスト結果
+- `bash tools/ci.sh`: 39 passed（GitHub Actions でも成功）
+
+## 未実施
+- #10 実ComfyUIでの4モデル画像比較とピークメモリ測定（実機でモデル導入が必要）
+
+================================================================================
