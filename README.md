@@ -35,6 +35,8 @@ Windowsでは `python3` を `python` または `py` に読み替えてくださ�
 | OpenAIでテキスト生成 | `python3 run_local.py --provider openai --iterations 1` | OpenAI API（明示指定時のみ） |
 | 画像モデル比較 | `python3 tools/benchmark_image_models.py` | ComfyUI（localhost） |
 
+画像モデル比較の設計と背景は [Issue #10](https://github.com/masa-san-jp/100-times-ai-heroes/issues/10) を参照してください。
+
 `setup_local.py` は導入用、`run_local.py` はサービス起動と実行用、`ollama_hero_gen.py` は生成パイプライン本体です。
 OpenAI経路を使う場合は、先に `python3 setup_local.py --skip-ollama --skip-images --with-cloud` を実行して追加依存関係を導入し、`OPENAI_API_KEY`を設定してください。
 
@@ -333,7 +335,9 @@ bash tools/ci.sh
 
 ### License and model terms
 
-このリポジトリには現在 `LICENSE` ファイルがないため、コードの再利用条件は明示されていません。コードを再配布・組み込む場合は、権利者に確認してください。
+このリポジトリのソースコードは [MIT License](LICENSE) で提供します。
+
+READMEに掲載している作品画像と動画、コンセプトの文章、および `examples/` に置く生成画像はMIT Licenseの対象外です。これらの権利は作者に帰属します。利用したい場合は作者に確認してください。
 
 画像モデルはリポジトリに含めず、セットアップ時に選択したモデルカードから取得します。モデルごとにライセンスと利用制限が異なります。特に実験候補を商用制作で使う場合は、`config/comfyui/model_profiles.json` の `source_url` とモデルカードを確認してください。
 
