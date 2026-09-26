@@ -20,6 +20,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from comfyui_image_gen import (  # noqa: E402
     ComfyUIConfigurationError,
+    ComfyUITimeoutError,
     ComfyUIImageGenerator,
     GeneratedImage,
 )
@@ -32,6 +33,7 @@ import ollama_hero_gen as app  # noqa: E402
 from ollama_hero_gen import (  # noqa: E402
     Config,
     LocalStorage,
+    OllamaConnectionError,
     OllamaInference,
     OllamaModelNotFoundError,
     OpenAIInference,
@@ -168,6 +170,54 @@ def test_ollama_model_list_object_is_supported(tmp_path):
     assert inference.config.model == "test-model"
 
 
+def test_ollama_connection_error_includes_host_and_serve_hint(tmp_path):
+    client = MagicMock()
+    client.list.side_effect = RuntimeError("connection refused")
+    config = make_config(tmp_path)
+
+    with pytest.raises(OllamaConnectionError) as error:
+        OllamaInference(config, client=client)
+
+    assert config.host in str(error.value)
+    assert "ollama serve" in str(error.value)
+    assert not isinstance(error.value, OllamaModelNotFoundError)
+
+
+def test_ollama_retry_uses_exponential_backoff(monkeypatch, tmp_path):
+    client = MagicMock()
+    client.list.return_value = {"models": [{"name": "test-model"}]}
+    client.chat.side_effect = [
+        RuntimeError("temporary failure 1"),
+        RuntimeError("temporary failure 2"),
+        {"message": {"content": "answer"}},
+    ]
+    sleeps = []
+    monkeypatch.setattr(app.time, "sleep", sleeps.append)
+
+    result = OllamaInference(make_config(tmp_path), client=client).generate("prompt")
+
+    assert result == "answer"
+    assert sleeps == [1, 2]
+    assert client.chat.call_count == 3
+
+
+def test_ollama_retry_reraises_last_exception(monkeypatch, tmp_path):
+    client = MagicMock()
+    client.list.return_value = {"models": [{"name": "test-model"}]}
+    failures = [
+        RuntimeError("failure 1"),
+        RuntimeError("failure 2"),
+        RuntimeError("failure 3"),
+    ]
+    client.chat.side_effect = failures
+    monkeypatch.setattr(app.time, "sleep", lambda _: None)
+
+    with pytest.raises(RuntimeError, match="failure 3") as error:
+        OllamaInference(make_config(tmp_path), client=client).generate("prompt")
+
+    assert error.value is failures[-1]
+
+
 def test_ollama_inference_reads_dict_response(tmp_path):
     client = MagicMock()
     client.list.return_value = {"models": [{"name": "test-model"}]}
@@ -195,6 +245,34 @@ def test_local_storage_creates_and_validates_seed_files(tmp_path):
 
     with storage.output_file.open(newline="", encoding="utf-8") as file:
         assert next(csv.reader(file)) == LocalStorage.OUTPUT_HEADERS
+
+
+def test_local_storage_instances_use_unique_runs_and_shared_seeds(
+    monkeypatch, tmp_path
+):
+    class DeterministicDateTime:
+        calls = 0
+
+        @classmethod
+        def now(cls):
+            cls.calls += 1
+            return SimpleNamespace(
+                strftime=lambda _format: f"20260926_120000_{cls.calls:06d}"
+            )
+
+    monkeypatch.setattr(app, "datetime", DeterministicDateTime)
+    config = make_config(tmp_path)
+
+    first = LocalStorage(config)
+    second = LocalStorage(config)
+
+    assert first.run_dir != second.run_dir
+    assert first.seed_files == second.seed_files
+    assert {
+        key: first.seed_files[key].read_bytes() for key in first.seed_files
+    } == {
+        key: second.seed_files[key].read_bytes() for key in second.seed_files
+    }
 
 
 def test_seed_header_error(tmp_path):
@@ -276,6 +354,34 @@ def test_generation_loop_writes_requested_number(tmp_path):
 
     with output_file.open(newline="", encoding="utf-8") as file:
         assert len(list(csv.reader(file))) == 3
+
+
+def test_generation_progress_reports_each_iteration(tmp_path, capsys):
+    responses = []
+    for index in range(3):
+        responses.extend(
+            [
+                f"Concept {index}",
+                f"Name {index}",
+                f"Profile {index}",
+                f"Catchphrase {index}",
+                f"Ability {index}",
+                f"Want {index}",
+                f"Role {index}",
+            ]
+        )
+    config = make_config(tmp_path, num_iterations=3)
+
+    generate_characters(
+        config,
+        text_generator=FakeTextGenerator(responses=responses),
+        storage=LocalStorage(config),
+    )
+
+    output = capsys.readouterr().out
+    assert "[1/3]" in output
+    assert "[2/3]" in output
+    assert "[3/3]" in output
 
 
 def test_generation_failure_keeps_previous_rows_and_records_error(tmp_path):
@@ -426,6 +532,29 @@ def test_comfyui_api_queue_history_and_download(tmp_path):
     assert [method for method, _ in calls] == ["GET", "POST", "GET", "GET"]
 
 
+def test_comfyui_history_timeout_uses_injected_clock(tmp_path):
+    current_time = [0.0]
+
+    def clock():
+        value = current_time[0]
+        current_time[0] += 0.6
+        return value
+
+    generator = ComfyUIImageGenerator(
+        base_url="http://127.0.0.1:8188",
+        workflow_path=tmp_path / "workflow.json",
+        checkpoint_name="model.safetensors",
+        timeout_seconds=1.0,
+        poll_interval_seconds=0.25,
+        opener=lambda _request, timeout=None: FakeHTTPResponse(b"{}"),
+        clock=clock,
+        sleeper=lambda _seconds: None,
+    )
+
+    with pytest.raises(ComfyUITimeoutError, match="timed out after 1.0s"):
+        generator._wait_for_history("abc")
+
+
 def test_comfyui_profile_can_apply_clip_skip(tmp_path):
     workflow_path = tmp_path / "workflow.json"
     workflow_path.write_text(
@@ -528,6 +657,55 @@ def test_openai_provider_requires_key(tmp_path):
 
     with pytest.raises(ValueError, match="OPENAI_API_KEY"):
         OpenAIInference(config, client=MagicMock())
+
+
+def test_default_provider_is_ollama_without_openai_client(
+    monkeypatch, tmp_path
+):
+    monkeypatch.chdir(PROJECT_ROOT)
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.setenv("OLLAMA_MODEL", "test-model")
+    monkeypatch.setattr(app, "load_dotenv", lambda: None)
+    ollama_client = MagicMock()
+    ollama_client.list.return_value = {"models": [{"name": "test-model"}]}
+    ollama_constructor = MagicMock(return_value=ollama_client)
+    monkeypatch.setattr(app.ollama, "Client", ollama_constructor)
+    openai_constructor = MagicMock(side_effect=AssertionError("OpenAI was used"))
+    monkeypatch.setattr(app, "OpenAIInference", openai_constructor)
+
+    config = Config.from_env()
+    generator = app.create_text_generator(config)
+
+    assert config.provider == "ollama"
+    assert isinstance(generator, OllamaInference)
+    ollama_constructor.assert_called_once_with(host=config.host, timeout=120)
+    openai_constructor.assert_not_called()
+
+
+def test_main_returns_one_for_missing_model_without_traceback(
+    monkeypatch, tmp_path, capsys
+):
+    config = make_config(tmp_path, model="missing-model")
+    monkeypatch.setattr(
+        app.Config,
+        "from_env",
+        classmethod(lambda _cls: config),
+    )
+
+    def raise_missing_model(_config):
+        raise OllamaModelNotFoundError(
+            "Model 'missing-model' is not installed. Run: ollama pull missing-model"
+        )
+
+    monkeypatch.setattr(app, "generate_characters", raise_missing_model)
+
+    result = app.main()
+    captured = capsys.readouterr()
+
+    assert result == 1
+    assert "ERROR:" in captured.err
+    assert "missing-model" in captured.err
+    assert "Traceback" not in captured.err
 
 
 def test_prompts_and_image_prompt():
