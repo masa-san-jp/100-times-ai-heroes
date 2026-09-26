@@ -54,11 +54,11 @@ echo "  OK: Python $PYTHON_VERSION"
 # 5. 依存パッケージインストール
 echo ""
 echo "[5/6] Installing dependencies..."
-if [ -f "requirements.txt" ]; then
-    pip3 install -q -r requirements.txt
+if [ -f "requirements-dev.txt" ]; then
+    pip3 install -q -r requirements-dev.txt
     echo "  OK: Dependencies installed"
 else
-    echo "  SKIP: requirements.txt not found"
+    echo "  SKIP: requirements-dev.txt not found"
 fi
 
 # 6. 環境変数確認
