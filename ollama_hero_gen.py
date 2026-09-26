@@ -180,10 +180,8 @@ class Config:
             comfyui_url=os.getenv("COMFYUI_URL", "http://127.0.0.1:8188"),
             comfyui_model_profile=model_profile_id,
             comfyui_model_profiles_path=model_profiles_path,
-            comfyui_workflow_path=os.getenv(
-                "COMFYUI_WORKFLOW_PATH",
-                "./config/comfyui/text2image_api_workflow.json",
-            ),
+            comfyui_workflow_path=os.getenv("COMFYUI_WORKFLOW_PATH")
+            or image_profile.workflow_path,
             comfyui_checkpoint_name=checkpoint_name,
             comfyui_timeout_seconds=_env_float("COMFYUI_TIMEOUT_SECONDS", 300.0),
             comfyui_poll_interval_seconds=_env_float(
@@ -821,6 +819,10 @@ def _safe_filename(value: str) -> str:
 def _create_image_generator(config: Config) -> Any:
     from comfyui_image_gen import ComfyUIImageGenerator
 
+    profile = get_image_model_profile(
+        config.comfyui_model_profile,
+        Path(config.comfyui_model_profiles_path),
+    )
     return ComfyUIImageGenerator(
         base_url=config.comfyui_url,
         workflow_path=Path(config.comfyui_workflow_path),
@@ -835,6 +837,7 @@ def _create_image_generator(config: Config) -> Any:
         scheduler=config.comfyui_scheduler,
         negative_prompt=config.comfyui_negative_prompt,
         clip_skip=config.comfyui_clip_skip,
+        model_files=profile.model_files,
     )
 
 

@@ -284,9 +284,18 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _download_model(profile, destination: Path, *, assume_yes: bool, dry_run: bool) -> None:
+def _download_model_file(
+    profile_id: str,
+    url: str,
+    expected_sha256: str,
+    destination: Path,
+    *,
+    size: str = "",
+    assume_yes: bool,
+    dry_run: bool,
+) -> None:
     if destination.exists():
-        if destination.is_file() and _sha256(destination) == profile.model_sha256:
+        if destination.is_file() and _sha256(destination) == expected_sha256:
             print(f"OK: image model is installed: {destination.name}")
             return
         if not _confirm(
@@ -306,15 +315,16 @@ def _download_model(profile, destination: Path, *, assume_yes: bool, dry_run: bo
             f"現在: {free_bytes / 1024**3:.1f}GB"
         )
 
-    url = _model_download_url(profile)
+    size_note = f"（{size}）" if size else ""
     if not _confirm(
-        f"画像モデル {profile.profile_id}（約7GB）をダウンロードします。"
+        f"画像モデル {profile_id}{size_note} をダウンロードします。"
         f"保存先: {destination}\n続行しますか?",
         assume_yes=assume_yes or dry_run,
     ):
         raise SetupError("画像モデルの導入を中止しました。")
     if dry_run:
         print(f"Would download: {url}")
+        print(f"  Destination: {destination}")
         return
 
     _ensure_directory(destination.parent)
@@ -322,7 +332,7 @@ def _download_model(profile, destination: Path, *, assume_yes: bool, dry_run: bo
     existing_bytes = partial.stat().st_size if partial.exists() else 0
     headers = {"Range": f"bytes={existing_bytes}-"} if existing_bytes else {}
     request = urllib.request.Request(url, headers=headers, method="GET")
-    print(f"Downloading {profile.profile_id} ...")
+    print(f"Downloading {profile_id} ...")
     try:
         response = urllib.request.urlopen(request, timeout=60.0)
         status = getattr(response, "status", 200)
@@ -356,13 +366,55 @@ def _download_model(profile, destination: Path, *, assume_yes: bool, dry_run: bo
     except (urllib.error.URLError, OSError) as exc:
         raise SetupError(f"モデルのダウンロードに失敗しました。再実行すると再開できます: {exc}") from exc
 
-    if actual_hash != profile.model_sha256:
+    if actual_hash != expected_sha256:
         raise SetupError(
-            f"モデルのSHA256が一致しません。期待値={profile.model_sha256}, 実際={actual_hash}\n"
+            f"モデルのSHA256が一致しません。期待値={expected_sha256}, 実際={actual_hash}\n"
             f"不完全なファイルは保持しています: {partial}"
         )
     os.replace(partial, destination)
     print(f"OK: image model installed: {destination}")
+
+
+def _download_model(profile, destination: Path, *, assume_yes: bool, dry_run: bool) -> None:
+    """Download the legacy single-checkpoint model for an SDXL profile."""
+    _download_model_file(
+        profile.profile_id,
+        _model_download_url(profile),
+        profile.model_sha256,
+        destination,
+        size="約7GB",
+        assume_yes=assume_yes,
+        dry_run=dry_run,
+    )
+
+
+def _download_model_files(
+    profile,
+    comfyui_dir: Path,
+    *,
+    assume_yes: bool,
+    dry_run: bool,
+) -> None:
+    if profile.experimental and profile.license_note:
+        print(f"LICENSE NOTE ({profile.profile_id}): {profile.license_note}")
+        if not _confirm(
+            "この実験的profileのライセンス注意事項を確認し、続行しますか?",
+            assume_yes=assume_yes or dry_run,
+        ):
+            raise SetupError("実験的profileの導入を中止しました。")
+
+    for model_file in profile.model_files:
+        destination = comfyui_dir / "models" / model_file.subdir / model_file.filename
+        _download_model_file(
+            profile.profile_id,
+            model_file.url,
+            model_file.sha256,
+            destination,
+            size=model_file.size,
+            # The license confirmation above authorizes all files in this profile.
+            assume_yes=assume_yes or bool(profile.experimental and profile.license_note),
+            dry_run=dry_run,
+        )
 
 
 def _update_env(profile_id: str, comfyui_dir: Path, comfyui_venv: Path) -> None:
@@ -375,6 +427,7 @@ def _update_env(profile_id: str, comfyui_dir: Path, comfyui_venv: Path) -> None:
     values = {
         "COMFYUI_MODEL_PROFILE": profile_id,
         "COMFYUI_CHECKPOINT_NAME": "",
+        "COMFYUI_WORKFLOW_PATH": "",
         "COMFYUI_DIR": str(comfyui_dir),
         "COMFYUI_VENV": str(comfyui_venv),
     }
@@ -471,13 +524,21 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 venv_dir=comfyui_venv,
                 dry_run=args.dry_run,
             )
-            destination = comfyui_dir / "models" / "checkpoints" / profile.checkpoint_name
-            _download_model(
-                profile,
-                destination,
-                assume_yes=args.yes,
-                dry_run=args.dry_run,
-            )
+            if profile.model_files:
+                _download_model_files(
+                    profile,
+                    comfyui_dir,
+                    assume_yes=args.yes,
+                    dry_run=args.dry_run,
+                )
+            else:
+                destination = comfyui_dir / "models" / "checkpoints" / profile.checkpoint_name
+                _download_model(
+                    profile,
+                    destination,
+                    assume_yes=args.yes,
+                    dry_run=args.dry_run,
+                )
             if not args.dry_run:
                 _update_env(args.profile, comfyui_dir, comfyui_venv)
 
