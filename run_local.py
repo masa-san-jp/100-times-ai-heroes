@@ -13,6 +13,8 @@ import urllib.request
 from pathlib import Path
 from typing import Optional, Sequence
 
+from comfyui_config import resolve_comfyui_dir, resolve_comfyui_venv
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 RUNTIME_DIR = PROJECT_ROOT / ".runtime"
@@ -32,10 +34,15 @@ def _load_dotenv() -> None:
 
 _load_dotenv()
 PROJECT_PYTHON = PROJECT_ROOT / (".venv/Scripts/python.exe" if os.name == "nt" else ".venv/bin/python")
-COMFYUI_PYTHON = RUNTIME_DIR / ("comfyui-venv/Scripts/python.exe" if os.name == "nt" else "comfyui-venv/bin/python")
-COMFYUI_DIR = Path(os.environ.get("COMFYUI_DIR", str(RUNTIME_DIR / "ComfyUI"))).expanduser()
-if not COMFYUI_DIR.is_absolute():
-    COMFYUI_DIR = PROJECT_ROOT / COMFYUI_DIR
+COMFYUI_DIR = resolve_comfyui_dir(PROJECT_ROOT, os.environ.get("COMFYUI_DIR"))
+COMFYUI_VENV = resolve_comfyui_venv(
+    PROJECT_ROOT,
+    COMFYUI_DIR,
+    os.environ.get("COMFYUI_VENV"),
+)
+COMFYUI_PYTHON = COMFYUI_VENV / (
+    "Scripts/python.exe" if os.name == "nt" else "bin/python"
+)
 COMFYUI_URL = os.environ.get("COMFYUI_URL", "http://127.0.0.1:8188")
 OLLAMA_URL = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 
