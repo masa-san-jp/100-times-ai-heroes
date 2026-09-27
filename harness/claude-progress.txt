@@ -157,3 +157,28 @@ SESSION: 2026-09-26 - Improvement issues (Claude review + Codex implementation)
 - #10 実ComfyUIでの4モデル画像比較とピークメモリ測定（実機でモデル導入が必要）
 
 ================================================================================
+
+SESSION: 2026-09-27 - Image model comparison on real hardware, licenses, setup fixes
+================================================================================
+
+## 完了したタスク
+- [x] #22 ComfyUI の仮想環境の場所を指定可能に（COMFYUI_VENV。Google ドライブ外へ導入するため）
+- [x] #23 Qwen-Image 2.1 を実験 profile として追加（研究・評価目的のみのライセンス）
+- [x] #26 SDXL の画像がノイズ状になる不具合を修正（CLIPSetLastLayer(-1) を経由しない）
+- [x] #10 5モデル × 3ケース × seed 2つを実機で比較。記録は examples/model-comparison/
+- [x] #27 同一プロンプト・同一条件の比較モード、「Can」→「ability to」の正規化、安全な除外語、比較ページ生成ツール
+- [x] 画像モデルのライセンスを原典リンク付きで docs/MODEL_LICENSES.md に整理（Pony の誤記を修正）
+- [x] setup_local.py で ComfyUI を v0.37.4 に固定
+- [x] run_local.py が README どおりの `--iterations 1 --generate-images` を受け付けなかった不具合を修正
+
+## 判断メモ
+- 既定の画像モデルは Animagine XL 4.0。Qwen は画質・設定の反映では上だが、研究・評価目的のみのライセンスで、1枚約9分かかるため実験候補に留める
+- 生成物は販売しない方針（キャラクターのアイデア出しが用途）
+
+## テスト結果
+- `bash tools/ci.sh`: 60 passed
+- 実機: run_local.py --iterations 1 --generate-images で、gpt-oss:20b のキャラクター生成から Animagine の画像生成まで成功
+
+## 既知の課題
+- Animagine は背景に演出が入りやすく、白背景になりにくい。手や腕の崩れが出ることがある
+================================================================================
