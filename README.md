@@ -40,6 +40,70 @@ Windowsでは `python3` を `python` または `py` に読み替えてくださ�
 `setup_local.py` は導入用、`run_local.py` はサービス起動と実行用、`ollama_hero_gen.py` は生成パイプライン本体です。
 OpenAI経路を使う場合は、先に `python3 setup_local.py --skip-ollama --skip-images --with-cloud` を実行して追加依存関係を導入し、`OPENAI_API_KEY`を設定してください。
 
+## 出力サンプル
+
+既定の設定（LLM: `gpt-oss:20b`、画像: Qwen-Image 2.1 + Viggle turbo）で、2026-09-27 に生成した3体です。seed CSV からランダムに選ばれた属性（年齢・性別・種族・役割・能力・願望）をもとに、LLM が名前・プロフィール・決め台詞・身長を作ります。そのうえで、全身像と、全身像を参照画像にした T ポーズの3面図（正面・側面・背面）を生成します。画像の下の名前と身長は、プログラムで描き入れています。プロフィールと決め台詞は、生成されたものをそのまま載せています。
+
+1体を生成すると、次のフォルダができます（M4 Max で1体あたり約10分）。
+
+```
+data/run_日時/characters/001_Eirian_Nox/
+├── character.json    # 全データ（属性、プロフィール、身長、画像の生成条件と seed）
+├── character.md      # 画像入りの設定資料
+├── full_body.png     # 全身像（名前・身長入り）
+├── turnaround.png    # 3面図（名前・身長入り）
+└── raw/              # 帯なしの元画像
+```
+
+ここに載せている画像は、容量を抑えるために JPEG に変換したものです。各キャラクターの `character.json` は [examples/characters/](examples/characters/) にあります。
+
+### Eirian Nox（身長 165cm）
+
+| 全身像 | 3面図 |
+|---|---|
+| <img src="examples/characters/001_Eirian_Nox/full_body.jpg" width="240"> | <img src="examples/characters/001_Eirian_Nox/turnaround.jpg" width="560"> |
+
+- 年齢・性別・種族: Late teens（十代後半）/ Genderfluid（ジェンダーフルイド）/ Nine-tailed fox apprentice（九尾の狐の見習い）
+- 役割: Border Guard of the Dream Country（夢の国の国境警備員。夢に入る眠る人のパスポートを検査する）
+- 能力: Can erase their presence from cameras and screens（カメラや画面から自分の存在を消せる）
+- 願望: I want to find a friend who is not afraid of my power.（自分の力を恐れない友人を見つけたい）
+- プロフィール: 彼は十代後半のジェンダーフルード九尾の狐の見習いで、夢国の国境警備員として働く。夢に入る眠人のパスポートをチェックし、カメラや画面から彼らの存在を消し去る能力を持ち、目に見えないまま国境の整合性を保つ。彼は自分の力を恐れない友人を探している。
+- 決め台詞: 私は、夢の国の境界を巡る九尾の狐であり、誰もが私の姿を消す力を恐れずに受け入れられる仲間を探し出す。
+
+### Riven Quill（身長 125cm）
+
+| 全身像 | 3面図 |
+|---|---|
+| <img src="examples/characters/002_Riven_Quill/full_body.jpg" width="240"> | <img src="examples/characters/002_Riven_Quill/turnaround.jpg" width="560"> |
+
+- 年齢・性別・種族: Prepubescent（思春期前）/ Agender（アジェンダー）/ Minor demon on probation（保護観察中の小悪魔）
+- 役割: Mirror Customs Officer（鏡の税関職員。鏡像のあいだを行き来するものをすべて検査する）
+- 能力: Can reverse gravity for everyone who laughs（笑った人全員の重力を反転させられる）
+- 願望: I want to prove I am not the villain the prophecy described.（自分が予言に書かれた悪役ではないと証明したい）
+- プロフィール: 彼は未熟年齢の非バイナリーの小悪魔で、ミラー通関官として反射を超えるすべてのものを検査する。彼の能力は、笑う者全員に重力を逆転させることで、喜びの波がしきい値を超えた瞬間に発動する。彼は、予言で描かれた悪役ではないことを証明し、鏡の沈黙に宿る仮定に挑むことを願っている。
+- 決め台詞: 私は、鏡の境界を歩き、笑いの音で重力を逆転させ、プロフェシーに描かれた悪の像を揺るがす証明になるんだ。
+
+### Thorin Savorstone（身長 145cm）
+
+| 全身像 | 3面図 |
+|---|---|
+| <img src="examples/characters/003_Thorin_Savorstone/full_body.jpg" width="240"> | <img src="examples/characters/003_Thorin_Savorstone/turnaround.jpg" width="560"> |
+
+- 年齢・性別・種族: Frozen at nineteen for two hundred years（19歳のまま200年凍結されている）/ Male（男性）/ Dwarf（ドワーフ）
+- 役割: Taste Translator（味覚翻訳者。味を音楽に変換し、味を感じられない人に届ける）
+- 能力: Can hear the thoughts of animals as poetry（動物の考えを詩として聞き取れる）
+- 願望: I want to design a memory that everyone in the city can share without fighting.（街の誰もが争わずに共有できる記憶をデザインしたい）
+- プロフィール: 彼は19歳で凍結されて200年が経過した男性ドワーフで、役割はTaste Translator（味覚翻訳者）です。味を音楽に変換し、味覚を持たない人々へ届けることができ、動物の思考を詩として聴き取る能力も備えています。願望は、都市のすべての人々が争いなく共有できる記憶を設計することです。
+- 決め台詞: 私は、氷に閉じ込められた二百年の若き矮人として、味覚を失った者に音楽を奏で、動物の心音を詩に変えて、争いのない共鳴する記憶を街に刻むよ。
+
+### このサンプルでわかる課題
+
+- 3面図の造形は全身像とよく一致するが、九尾の尻尾が1本になるなど、複雑な特徴は崩れることがある
+- 「保護観察中の小悪魔」「19歳のまま凍結」のような意外性のある設定は、絵に表れにくい
+- ローカル LLM の日本語訳に誤りが出ることがある（Agender を「非バイナリー」と訳すなど）
+
+画像は Qwen-Image 2.1（Qwen Research License、研究・評価目的）で生成したもので、MIT License の対象外です（[License and model terms](#license-and-model-terms)）。
+
 ## 関連リポジトリ
 
 100 TIMES AIシリーズの制作工程を、キャラクター・物語・世界観・マンガ作画に分けて扱う兄弟リポジトリです。
