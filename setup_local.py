@@ -15,6 +15,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.error
 import urllib.parse
@@ -38,7 +39,7 @@ COMFYUI_REPOSITORY = "https://github.com/Comfy-Org/ComfyUI.git"
 # Pinned release verified with this project; master has broken SDXL workflows before.
 COMFYUI_REF = os.getenv("COMFYUI_REF", "v0.37.4")
 DEFAULT_LLM_MODEL = "gpt-oss:20b"
-DEFAULT_IMAGE_PROFILE = "qwen-image-2.1"
+DEFAULT_IMAGE_PROFILE = "qwen-image-2.1-turbo"
 MINIMUM_MODEL_FREE_BYTES = 12 * 1024**3
 
 
@@ -411,6 +412,73 @@ def _download_model(profile, destination: Path, *, assume_yes: bool, dry_run: bo
     )
 
 
+def _download_custom_node_file(
+    profile_id: str,
+    url: str,
+    expected_sha256: str,
+    destination: Path,
+    *,
+    assume_yes: bool,
+    dry_run: bool,
+) -> None:
+    """Download one ComfyUI custom node atomically after verifying its hash."""
+    if destination.exists():
+        if destination.is_file() and _sha256(destination) == expected_sha256:
+            print(f"OK: custom node is installed: {destination}")
+            return
+        raise SetupError(
+            f"custom nodeの既存ファイルのSHA256が一致しません。置き換えません: {destination}"
+        )
+
+    if not _confirm(
+        f"ComfyUI拡張 {profile_id} をダウンロードします。"
+        f"保存先: {destination}\n続行しますか?",
+        assume_yes=assume_yes or dry_run,
+    ):
+        raise SetupError("ComfyUI拡張の導入を中止しました。")
+    if dry_run:
+        print(f"Would download: {url}")
+        print(f"  Destination: {destination}")
+        return
+
+    _ensure_directory(destination.parent)
+    temporary_path: Optional[Path] = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="wb",
+            dir=destination.parent,
+            prefix=f".{destination.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as temporary:
+            temporary_path = Path(temporary.name)
+            request = urllib.request.Request(url, method="GET")
+            response = urllib.request.urlopen(request, timeout=60.0)
+            with response:
+                digest = hashlib.sha256()
+                while True:
+                    chunk = response.read(8 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    temporary.write(chunk)
+                    digest.update(chunk)
+                actual_sha256 = digest.hexdigest()
+
+        if actual_sha256 != expected_sha256:
+            raise SetupError(
+                f"custom nodeのSHA256が一致しません。期待値={expected_sha256}, "
+                f"実際={actual_sha256}"
+            )
+        os.replace(temporary_path, destination)
+        temporary_path = None
+        print(f"OK: custom node installed: {destination}")
+    except (urllib.error.URLError, OSError) as exc:
+        raise SetupError(f"ComfyUI拡張のダウンロードに失敗しました: {exc}") from exc
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
+
+
 def _print_license(profile) -> None:
     name = getattr(profile, "license_name", "") or "不明（モデルカードを確認）"
     url = getattr(profile, "license_url", "")
@@ -442,6 +510,19 @@ def _download_model_files(
             destination,
             size=model_file.size,
             # The license confirmation above authorizes all files in this profile.
+            assume_yes=assume_yes or bool(profile.license_note),
+            dry_run=dry_run,
+        )
+
+    for custom_node in profile.custom_nodes:
+        filename = Path(custom_node["filename"])
+        if filename.name != custom_node["filename"]:
+            raise SetupError(f"custom nodeのファイル名が不正です: {custom_node['filename']}")
+        _download_custom_node_file(
+            profile.profile_id,
+            custom_node["url"],
+            custom_node["sha256"],
+            comfyui_dir / "custom_nodes" / filename,
             assume_yes=assume_yes or bool(profile.license_note),
             dry_run=dry_run,
         )

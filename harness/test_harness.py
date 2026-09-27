@@ -253,7 +253,9 @@ def test_renderer_creates_all_fixture_image_slots(tmp_path):
 
     assert output.exists()
     assert (tmp_path / "thumbs").is_dir()
-    assert output.read_text(encoding="utf-8").count('class="image-cell"') == 30
+    assert output.read_text(encoding="utf-8").count('class="image-cell"') == (
+        len(profiles) * len(BENCHMARK_CASES) * 2
+    )
 
 
 def test_qwen_profile_uses_bf16_files_and_natural_prompt():
@@ -1020,6 +1022,45 @@ def test_comfyui_qwen_workflow_injects_all_profile_model_files():
     assert "clip_skip" not in WORKFLOW_CONFIGS["qwen_image_2_1_t2i_api_workflow.json"]["injections"]
 
 
+def test_comfyui_qwen_turbo_workflow_injects_required_values_without_legacy_settings():
+    profile = get_image_model_profile(
+        "qwen-image-2.1-turbo",
+        PROJECT_ROOT / "config" / "comfyui" / "model_profiles.json",
+    )
+    generator = ComfyUIImageGenerator(
+        base_url="http://127.0.0.1:8188",
+        workflow_path=PROJECT_ROOT / profile.workflow_path,
+        checkpoint_name=profile.checkpoint_name,
+        width=profile.width,
+        height=profile.height,
+        steps=profile.steps,
+        cfg=profile.cfg,
+        sampler=profile.sampler,
+        scheduler=profile.scheduler,
+        negative_prompt=profile.negative_prompt,
+        model_files=profile.model_files,
+    )
+
+    workflow = generator._build_workflow("A turbo hero", 42)
+    inputs = workflow
+
+    assert inputs["1"]["inputs"]["unet_name"] == "qwen_image_2.1_bf16.safetensors"
+    assert inputs["2"]["inputs"]["clip_name"] == "qwen3vl_8b_bf16.safetensors"
+    assert inputs["3"]["inputs"]["vae_name"] == "qwen_image_2.1_vae_bf16.safetensors"
+    assert inputs["10"]["inputs"]["lora_name"] == (
+        "Qwen-Image-2.1-viggle-turbo-v0.2.1-6step-lora-r128.safetensors"
+    )
+    assert inputs["4"]["inputs"]["prompt"] == "A turbo hero"
+    assert inputs["14"]["inputs"]["noise_seed"] == 42
+    assert inputs["5"]["inputs"]["width"] == 832
+    assert inputs["5"]["inputs"]["height"] == 1216
+    injections = WORKFLOW_CONFIGS[
+        "qwen_image_2_1_viggle_turbo_api_workflow.json"
+    ]["injections"]
+    assert set(injections) == {"positive_prompt", "seed", "width", "height", "model_files"}
+    assert "loras" in injections["model_files"]
+
+
 def test_comfyui_free_memory_calls_local_endpoint(tmp_path):
     workflow_path = tmp_path / "workflow.json"
     workflow_path.write_text(
@@ -1150,7 +1191,7 @@ def test_prompts_and_image_prompt():
     assert "A young warrior" in generate_image_prompt("A young warrior")
 
 
-def test_default_image_profile_is_qwen_with_profile_timeout(monkeypatch, tmp_path):
+def test_default_image_profile_is_qwen_turbo_with_profile_timeout(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setattr(app, "load_dotenv", lambda: None)
     for name in ("COMFYUI_MODEL_PROFILE", "COMFYUI_MODEL_PROFILES_PATH", "COMFYUI_TIMEOUT_SECONDS"):
@@ -1159,5 +1200,5 @@ def test_default_image_profile_is_qwen_with_profile_timeout(monkeypatch, tmp_pat
 
     config = Config.from_env()
 
-    assert config.comfyui_model_profile == "qwen-image-2.1"
-    assert config.comfyui_timeout_seconds >= 1200
+    assert config.comfyui_model_profile == "qwen-image-2.1-turbo"
+    assert config.comfyui_timeout_seconds == 600

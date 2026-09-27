@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -89,6 +90,62 @@ def test_download_model_skips_a_verified_existing_file(tmp_path, capsys):
     setup_local._download_model(profile, destination, assume_yes=False, dry_run=False)
 
     assert "image model is installed" in capsys.readouterr().out
+
+
+def test_turbo_profile_custom_node_dry_run_prints_url_and_destination(tmp_path, capsys):
+    profile = get_image_model_profile(
+        "qwen-image-2.1-turbo",
+        PROJECT_ROOT / "config" / "comfyui" / "model_profiles.json",
+    )
+
+    setup_local._download_model_files(profile, tmp_path, assume_yes=False, dry_run=True)
+
+    output = capsys.readouterr().out
+    custom_node = profile.custom_nodes[0]
+    assert custom_node["url"] in output
+    assert str(tmp_path / "custom_nodes" / "viggle_turbo.py") in output
+
+
+def test_custom_node_hash_mismatch_discards_temp_file(monkeypatch, tmp_path):
+    payload = b"not the pinned extension"
+
+    class FakeResponse(io.BytesIO):
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    monkeypatch.setattr(
+        setup_local.urllib.request,
+        "urlopen",
+        lambda _request, timeout=None: FakeResponse(payload),
+    )
+    destination = tmp_path / "custom_nodes" / "viggle_turbo.py"
+
+    try:
+        setup_local._download_custom_node_file(
+            "qwen-image-2.1-turbo",
+            "https://example.invalid/viggle_turbo.py",
+            hashlib.sha256(b"expected extension").hexdigest(),
+            destination,
+            assume_yes=True,
+            dry_run=False,
+        )
+    except setup_local.SetupError as exc:
+        assert "SHA256" in str(exc)
+    else:
+        raise AssertionError("expected a SHA256 mismatch")
+
+    assert not destination.exists()
+    assert list(destination.parent.glob(".*.tmp")) == []
+
+
+def test_turbo_is_the_setup_default(monkeypatch):
+    monkeypatch.delenv("COMFYUI_MODEL_PROFILE", raising=False)
+    assert setup_local.parse_args([]).profile == "qwen-image-2.1-turbo"
 
 
 def test_comfyui_clone_is_pinned_to_release(monkeypatch, tmp_path):

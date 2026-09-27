@@ -122,6 +122,62 @@
       "license_name": "Qwen Research License Agreement (2026-09-20)",
       "license_url": "https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE",
       "source_url": "https://huggingface.co/Qwen/Qwen-Image-2.1"
+    },
+    "qwen-image-2.1-turbo": {
+      "checkpoint_name": "qwen_image_2.1_bf16.safetensors",
+      "prompt_style": "natural",
+      "width": 832,
+      "height": 1216,
+      "steps": 6,
+      "cfg": 1.0,
+      "sampler": "euler",
+      "scheduler": "simple",
+      "negative_prompt": "nsfw, nude, nipples, child, loli, shota",
+      "timeout_seconds": 600,
+      "experimental": false,
+      "notes": "既定の高速画像モデル。Viggle 6ステップ LoRAで1枚約2.5〜3分（M4 Max）。",
+      "license_note": "Qwen Research License: 利用目的は研究・評価に限られる（第1条i・第2条a）。商用利用は別途契約が必要。Viggle派生物はBuilt with Qwenの表示に従う",
+      "workflow_path": "config/comfyui/qwen_image_2_1_viggle_turbo_api_workflow.json",
+      "model_files": [
+        {
+          "subdir": "diffusion_models",
+          "filename": "qwen_image_2.1_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_bf16.safetensors",
+          "sha256": "89f4158d066cc33906a199fca85634f766892dd78f49b6698dabf187ac86c4bc",
+          "size": "14.23GB"
+        },
+        {
+          "subdir": "text_encoders",
+          "filename": "qwen3vl_8b_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_bf16.safetensors",
+          "sha256": "68bdc82bc1b66851162ae656225e7e2068166b603db19bd5d5a3b90eb12669a9",
+          "size": "17.53GB"
+        },
+        {
+          "subdir": "vae",
+          "filename": "qwen_image_2.1_vae_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/vae/qwen_image_2.1_vae_bf16.safetensors",
+          "sha256": "bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9",
+          "size": "0.68GB"
+        },
+        {
+          "subdir": "loras",
+          "filename": "Qwen-Image-2.1-viggle-turbo-v0.2.1-6step-lora-r128.safetensors",
+          "url": "https://huggingface.co/Viggle/Qwen-Image-2.1-viggle-turbo/resolve/bb26a0f38e5fe6c124aaccc9187a87eed5d9ed13/Qwen-Image-2.1-viggle-turbo-v0.2.1-6step-lora-r128.safetensors",
+          "sha256": "bafb91d0047df3f9b8a5a850b0c967f051164314d8aad778dfa34d9c24ec345b",
+          "size": "0.68GB"
+        }
+      ],
+      "custom_nodes": [
+        {
+          "filename": "viggle_turbo.py",
+          "url": "https://huggingface.co/Viggle/Qwen-Image-2.1-viggle-turbo/resolve/bb26a0f38e5fe6c124aaccc9187a87eed5d9ed13/comfyui/viggle_turbo.py",
+          "sha256": "017911bb7d9c855c6ea6854adeeeea1aed576ca1c9cb487376419f5bae14e93d"
+        }
+      ],
+      "license_name": "Qwen Research License Agreement (2026-09-20)",
+      "license_url": "https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE",
+      "source_url": "https://huggingface.co/Viggle/Qwen-Image-2.1-viggle-turbo"
     }
   }
 }

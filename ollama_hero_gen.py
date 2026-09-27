@@ -153,7 +153,7 @@ class Config:
         selected_model = openai_model if provider == "openai" else ollama_model
 
         model_profile_id = os.getenv(
-            "COMFYUI_MODEL_PROFILE", "qwen-image-2.1"
+            "COMFYUI_MODEL_PROFILE", "qwen-image-2.1-turbo"
         ).strip()
         model_profiles_path = os.getenv("COMFYUI_MODEL_PROFILES_PATH") or str(
             Path(__file__).resolve().parent / "config/comfyui/model_profiles.json"
