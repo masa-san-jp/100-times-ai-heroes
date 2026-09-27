@@ -23,7 +23,7 @@ from typing import Any, Callable, Dict, List, Optional, Protocol
 
 import ollama
 from dotenv import load_dotenv
-from image_labels import label_image
+from image_labels import content_touches_edges, label_image
 from image_model_profiles import (
     build_image_prompt,
     get_image_model_profile,
@@ -763,6 +763,10 @@ class LocalStorage:
 # =============================================================================
 
 
+TURNAROUND_MAX_ATTEMPTS = 3
+TURNAROUND_MARGIN_RATIO = 0.04
+
+
 class Prompts:
     """キャラクター生成用プロンプト。"""
 
@@ -771,10 +775,13 @@ class Prompts:
         "character is shown three times side by side in a T-pose with both arms "
         "stretched straight out horizontally: front view on the left, side view in "
         "the middle, back view on the right. Each view is full body from head to "
-        "feet. The face, hairstyle, outfit, colors, materials and accessories are "
-        "identical to image 1, with the same body proportions and the same height in "
-        "all three views. Plain white background, clean anime illustration style, "
-        "evenly spaced, no text, no labels, no watermark."
+        "feet, drawn small enough that the fingertips of the outstretched arms stay "
+        "well inside the frame. Leave generous empty white margin on all four sides "
+        "of the image and clear space between the three views; nothing touches or "
+        "crosses the image edges. The face, hairstyle, outfit, colors, materials and "
+        "accessories are identical to image 1, with the same body proportions and "
+        "the same height in all three views. Plain white background, clean anime "
+        "illustration style, evenly spaced, no text, no labels, no watermark."
     )
 
     @staticmethod
@@ -1203,13 +1210,23 @@ def generate_characters(
                 turnaround_data = None
                 if turnaround_supported:
                     def generate_turnaround() -> Any:
-                        result = image_generator.generate_turnaround(
-                            Prompts.TURNAROUND,
-                            raw_dir / "full_body.png",
-                            raw_dir,
-                            "turnaround",
-                        )
-                        return move_generated(result, raw_dir / "turnaround.png")
+                        # Retry with a new seed when the figures touch the image edges
+                        # (e.g. fingertips of the T-pose cut off).
+                        for attempt in range(TURNAROUND_MAX_ATTEMPTS):
+                            result = image_generator.generate_turnaround(
+                                Prompts.TURNAROUND,
+                                raw_dir / "full_body.png",
+                                raw_dir,
+                                "turnaround",
+                            )
+                            result = move_generated(result, raw_dir / "turnaround.png")
+                            if not content_touches_edges(raw_dir / "turnaround.png"):
+                                return result
+                            print(
+                                "  Turnaround touches the image edge; "
+                                f"regenerating ({attempt + 1}/{TURNAROUND_MAX_ATTEMPTS})"
+                            )
+                        return result
 
                     turnaround_result = _stage("turnaround", generate_turnaround)
                     labeled_turnaround = temporary_dir / "turnaround.png"
@@ -1220,6 +1237,7 @@ def generate_characters(
                             labeled_turnaround,
                             name,
                             height_cm,
+                            margin_ratio=TURNAROUND_MARGIN_RATIO,
                         ),
                     )
                     turnaround_path = local_storage.relative_run_path(

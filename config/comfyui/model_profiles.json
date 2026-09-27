@@ -139,7 +139,7 @@
       "license_note": "Qwen Research License: 利用目的は研究・評価に限られる（第1条i・第2条a）。商用利用は別途契約が必要。Viggle派生物はBuilt with Qwenの表示に従う",
       "workflow_path": "config/comfyui/qwen_image_2_1_viggle_turbo_api_workflow.json",
       "turnaround_workflow_path": "config/comfyui/qwen_image_2_1_viggle_turbo_turnaround_api_workflow.json",
-      "turnaround_width": 1472,
+      "turnaround_width": 1664,
       "turnaround_height": 832,
       "turnaround_timeout_seconds": 900,
       "model_files": [

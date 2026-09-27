@@ -1618,3 +1618,34 @@ def test_new_seed_files_are_initialized_from_bundled_seeds(tmp_path):
     assert len(storage._seed_values["ability"]) >= 90
     assert len(storage._seed_values["wants"]) >= 90
     assert "Warrior. A skilled fighter dedicated to protecting others" not in storage._seed_values["role"]
+
+
+def test_content_touches_edges_requires_real_margin(tmp_path):
+    from PIL import Image, ImageDraw
+    from image_labels import content_touches_edges
+
+    centered = tmp_path / "centered.png"
+    image = Image.new("RGB", (1000, 500), "white")
+    ImageDraw.Draw(image).rectangle([100, 100, 900, 400], fill="black")
+    image.save(centered)
+    near_edge = tmp_path / "near_edge.png"
+    image = Image.new("RGB", (1000, 500), "white")
+    ImageDraw.Draw(image).rectangle([5, 100, 900, 400], fill="black")
+    image.save(near_edge)
+
+    assert content_touches_edges(centered) is False
+    assert content_touches_edges(near_edge) is True
+
+
+def test_label_image_adds_margin_around_source(tmp_path):
+    from PIL import Image
+    from image_labels import label_image
+
+    source = tmp_path / "source.png"
+    Image.new("RGB", (400, 200), "black").save(source)
+    out = label_image(source, tmp_path / "out.png", "Name", 150, margin_ratio=0.05)
+
+    with Image.open(out) as labeled:
+        assert labeled.width == 400 + 2 * 10
+        assert labeled.getpixel((5, 5)) == (255, 255, 255)
+        assert labeled.getpixel((15, 15)) == (0, 0, 0)

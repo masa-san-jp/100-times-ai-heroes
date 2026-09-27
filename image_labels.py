@@ -65,11 +65,12 @@ def label_image(
     destination_path: PathLike,
     name: str,
     height_cm: int,
+    margin_ratio: float = 0.0,
 ) -> Path:
     """Copy *source_path* to a new image with a white label band below it.
 
-    The source image is never resized or cropped.  The destination's top region
-    is therefore pixel-for-pixel identical to the source image.
+    The source image is never resized or cropped. With ``margin_ratio`` a white
+    margin of that fraction of the shorter side is added around it first.
     """
 
     source = Path(source_path)
@@ -79,6 +80,13 @@ def label_image(
             image = opened.convert("RGBA") if opened.mode not in {"RGB", "RGBA"} else opened.copy()
     except OSError as exc:
         raise ValueError(f"Cannot read image for labeling: {source}") from exc
+
+    if margin_ratio > 0:
+        margin = round(min(image.size) * margin_ratio)
+        padded = Image.new(image.mode, (image.width + margin * 2, image.height + margin * 2), "white")
+        padded.paste(image, (margin, margin))
+        image.close()
+        image = padded
 
     band_height = max(80, round(image.height * 0.10))
     output = Image.new(image.mode, (image.width, image.height + band_height), "white")
@@ -135,3 +143,38 @@ def add_image_label(
     """Compatibility-friendly alias for :func:`label_image`."""
 
     return label_image(source_path, destination_path, name, height_cm)
+
+
+def content_touches_edges(
+    image_path: PathLike,
+    *,
+    band_ratio: float = 0.01,
+    threshold: int = 230,
+    min_ratio: float = 0.002,
+) -> bool:
+    """Return True when non-background pixels reach the image border.
+
+    The border band is ``band_ratio`` of the width (left/right) or height
+    (top/bottom), so figures must keep a real margin, not just avoid being cut.
+    A pixel darker than ``threshold`` (0-255 luminance) counts as content; tiny
+    noise below ``min_ratio`` is ignored.
+    """
+
+    with Image.open(image_path) as opened:
+        gray = opened.convert("L")
+    width, height = gray.size
+    side = max(4, round(width * band_ratio))
+    edge = max(4, round(height * band_ratio))
+    regions = [
+        (0, 0, side, height),
+        (width - side, 0, width, height),
+        (0, 0, width, edge),
+        (0, height - edge, width, height),
+    ]
+    for box in regions:
+        histogram = gray.crop(box).histogram()
+        total = sum(histogram)
+        dark = sum(histogram[:threshold])
+        if total and dark / total >= min_ratio:
+            return True
+    return False
