@@ -262,7 +262,8 @@ def test_qwen_profile_uses_bf16_files_and_natural_prompt():
         PROJECT_ROOT / "config" / "comfyui" / "model_profiles.json",
     )
 
-    assert profile.experimental is True
+    assert profile.experimental is False
+    assert profile.timeout_seconds >= 1200
     assert profile.workflow_path.endswith("qwen_image_2_1_t2i_api_workflow.json")
     assert [model_file.filename for model_file in profile.model_files] == [
         "qwen_image_2.1_bf16.safetensors",
@@ -1147,3 +1148,16 @@ def test_prompts_and_image_prompt():
     assert "Warrior" in concept_prompt
     assert "英語" in concept_prompt
     assert "A young warrior" in generate_image_prompt("A young warrior")
+
+
+def test_default_image_profile_is_qwen_with_profile_timeout(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app, "load_dotenv", lambda: None)
+    for name in ("COMFYUI_MODEL_PROFILE", "COMFYUI_MODEL_PROFILES_PATH", "COMFYUI_TIMEOUT_SECONDS"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
+
+    config = Config.from_env()
+
+    assert config.comfyui_model_profile == "qwen-image-2.1"
+    assert config.comfyui_timeout_seconds >= 1200

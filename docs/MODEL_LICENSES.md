@@ -10,11 +10,11 @@
 
 | profile | モデル | ライセンス（原典） | モデルの商用利用 | 生成物の扱い | 取得元 |
 |---|---|---|---|---|---|
-| `animagine-xl-4.0-opt`（既定） | Animagine XL 4.0 | [CreativeML Open RAIL++-M](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md) | 可（利用制限あり） | 権利を主張しない。使い方の責任は利用者 | [公式](https://huggingface.co/cagliostrolab/animagine-xl-4.0) |
+| `animagine-xl-4.0-opt` | Animagine XL 4.0 | [CreativeML Open RAIL++-M](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md) | 可（利用制限あり） | 権利を主張しない。使い方の責任は利用者 | [公式](https://huggingface.co/cagliostrolab/animagine-xl-4.0) |
 | `illustrious-xl-v2` | Illustrious XL v2.0 | [CreativeML Open RAIL-M](https://huggingface.co/spaces/CompVis/stable-diffusion-license) | 可（利用制限あり） | 権利を主張しない。使い方の責任は利用者 | [公式](https://huggingface.co/OnomaAIResearch/Illustrious-XL-v2.0) |
 | `pony-v6-xl` | Pony Diffusion V6 XL | Modified Fair AI Public License 1.0-SD（[原典: Civitai のモデルページ](https://civitai.com/models/257749)） | 要許可。収益化しているサイトやアプリでの推論は禁止 | 原典で確認が必要 | [非公式の再配布](https://huggingface.co/LyliaEngine/Pony_Diffusion_V6_XL) |
 | `noobai-xl-1.1` | NoobAI XL 1.1 | [Fair AI Public License 1.0-SD](https://freedevproject.org/faipl-1.0-sd/) | 可（利用制限、派生物の公開条件あり） | ライセンスの対象外（権利を主張しない） | [公式](https://huggingface.co/Laxhar/noobai-XL-1.1) |
-| `qwen-image-2.1`（実験） | Qwen-Image 2.1 | [Qwen Research License Agreement（2026-09-20）](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE) | 不可（別途契約が必要）。利用目的は研究・評価に限られる | 使い道を直接制限する条項はない | [公式](https://huggingface.co/Qwen/Qwen-Image-2.1)（ComfyUI 用の再パッケージは [Comfy-Org](https://huggingface.co/Comfy-Org/Qwen-Image-2.1)） |
+| `qwen-image-2.1`（既定） | Qwen-Image 2.1 | [Qwen Research License Agreement（2026-09-20）](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE) | 不可（別途契約が必要）。利用目的は研究・評価に限られる | 使い道を直接制限する条項はない | [公式](https://huggingface.co/Qwen/Qwen-Image-2.1)（ComfyUI 用の再パッケージは [Comfy-Org](https://huggingface.co/Comfy-Org/Qwen-Image-2.1)） |
 
 ## モデルごとの要点
 
@@ -65,6 +65,6 @@
 ## このプロジェクトでの扱い
 
 - 生成物の販売は予定していない。用途はキャラクターのアイデアを出すこと（2026-09-27 時点の作者の方針）
-- 既定モデルは Animagine XL 4.0。商用利用が可能で、利用目的の制限がないため
-- Qwen-Image 2.1 は、比較評価のための実験候補として残す。アイデア出しへの常用が「研究または評価」の範囲に収まるかは作者の判断による
+- 既定モデルは Qwen-Image 2.1（2026-09-27 に変更）。比較で画質と設定の反映が最もよかったため。生成物を販売せず、生成 AI による創作の探求としてアイデアを出す用途は、研究・評価の範囲に収まると作者が判断した
+- 生成物を商用に使う場合や、用途が研究・評価に当たらない場合は、Animagine XL 4.0（商用利用可）に切り替えるか、Qwen の商用ライセンスを取得する
 - 付属書 A などの利用制限を守るため、すべての profile の除外語に `nsfw, nude, nipples, child, loli, shota` を入れている（`config/comfyui/model_profiles.json`）
