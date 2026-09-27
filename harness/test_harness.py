@@ -466,7 +466,7 @@ def test_generation_writes_csv_and_expands_seeds(tmp_path):
     assert rows[0] == LocalStorage.OUTPUT_HEADERS
     assert len(rows[1]) == len(LocalStorage.OUTPUT_HEADERS)
     assert rows[1][0] == "Test Name"
-    assert rows[1][-2:] == ["", ""]
+    assert rows[1][-3:] == ["", "", "characters/001_Test_Name"]
     assert "New ability" in storage._seed_values["ability"]
     assert "I want to win." in storage._seed_values["wants"]
     assert "New role" in storage._seed_values["role"]
@@ -476,7 +476,7 @@ def test_commit_rolls_back_when_second_seed_append_fails(monkeypatch, tmp_path):
     storage = LocalStorage(make_config(tmp_path))
     row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
         "value"
-    ] * 6 + ["", ""]
+    ] * 6 + ["", "", "characters/001_Name"]
     seed_updates = {
         "ability": "New ability",
         "wants": "New wants",
@@ -513,7 +513,7 @@ def test_commit_rolls_back_on_keyboard_interrupt(monkeypatch, tmp_path):
     storage = LocalStorage(make_config(tmp_path))
     row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
         "value"
-    ] * 6 + ["", ""]
+    ] * 6 + ["", "", "characters/001_Name"]
     paths = [storage.output_file, *storage.seed_files.values()]
     files_before = {path: path.read_bytes() for path in paths}
     original_append_seed = storage.append_seed
@@ -537,7 +537,7 @@ def test_commit_rolls_back_when_output_append_fails(monkeypatch, tmp_path):
     storage = LocalStorage(make_config(tmp_path))
     row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
         "value"
-    ] * 6 + ["", ""]
+    ] * 6 + ["", "", "characters/001_Name"]
     seed_updates = {
         "ability": "New ability",
         "wants": "New wants",
@@ -567,7 +567,7 @@ def test_commit_rollback_failure_raises_runtime_error_with_original_cause(
     storage = LocalStorage(make_config(tmp_path))
     row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
         "value"
-    ] * 6 + ["", ""]
+    ] * 6 + ["", "", "characters/001_Name"]
     seed_updates = {
         "ability": "New ability",
         "wants": "New wants",
@@ -619,12 +619,12 @@ def test_generation_persistence_failure_on_second_iteration_is_recorded(
     commit_calls = 0
     original_error = OSError("persistence failed")
 
-    def fail_second_commit(row, seed_updates):
+    def fail_second_commit(row, seed_updates, **kwargs):
         nonlocal commit_calls
         commit_calls += 1
         if commit_calls == 2:
             raise original_error
-        return original_commit(row, seed_updates)
+        return original_commit(row, seed_updates, **kwargs)
 
     monkeypatch.setattr(storage, "commit_character", fail_second_commit)
 
@@ -760,9 +760,170 @@ def test_image_generation_writes_path_and_seed(tmp_path):
     assert len(image_generator.calls) == 1
     with output_file.open(newline="", encoding="utf-8") as file:
         row = list(csv.reader(file))[1]
-    assert row[-2].endswith("/images/001_Test_Name.png")
-    assert row[-1] == "12345"
-    assert (tmp_path / row[-2]).exists()
+    assert row[-3] == "characters/001_Test_Name/image.png"
+    assert row[-2] == "12345"
+    assert (storage.run_dir / row[-3]).exists()
+    assert row[-1] == "characters/001_Test_Name"
+
+
+def test_two_image_characters_have_complete_per_character_outputs(tmp_path):
+    responses = []
+    for index in range(2):
+        responses.extend(
+            [
+                f"Concept {index}",
+                f"Name {index}",
+                f"Profile {index}",
+                f"Catchphrase {index}",
+                f"Ability {index}",
+                f"Want {index}",
+                f"Role {index}",
+            ]
+        )
+    config = make_config(tmp_path, num_iterations=2, generate_images=True)
+    storage = LocalStorage(config)
+
+    output_file = generate_characters(
+        config,
+        text_generator=FakeTextGenerator(responses=responses),
+        storage=storage,
+        image_generator=FakeImageGenerator(),
+    )
+
+    with output_file.open(newline="", encoding="utf-8") as file:
+        rows = list(csv.DictReader(file))
+    expected_keys = {
+        "schema_version",
+        "id",
+        "iteration",
+        "created_at",
+        "name",
+        "profile",
+        "catchphrase",
+        "concept",
+        "attributes",
+        "new_seeds",
+        "image",
+        "generation",
+    }
+    for row in rows:
+        character_dir = storage.run_dir / row["character_dir"]
+        assert row["image_path"] == f"{row['character_dir']}/image.png"
+        assert (character_dir / "character.md").exists()
+        assert (character_dir / "image.png").exists()
+        character = json.loads(
+            (character_dir / "character.json").read_text(encoding="utf-8")
+        )
+        assert set(character) == expected_keys
+        assert character["id"] == character_dir.name
+        assert character["name"] == row["name"]
+        assert character["profile"] == row["profile"]
+        assert character["catchphrase"] == row["catchphrase"]
+        assert character["concept"] == row["concept"]
+        assert character["attributes"] == {
+            key: row[key]
+            for key in ("age", "gender", "species", "ability", "wants", "role")
+        }
+        assert character["image"]["file"] == "image.png"
+        assert character["image"]["prompt"] == row["image_prompt"]
+        assert str(character["image"]["seed"]) == row["image_seed"]
+        assert "OPENAI_API_KEY" not in json.dumps(character)
+
+
+def test_no_image_output_has_null_image_and_no_image_markdown(tmp_path):
+    config = make_config(tmp_path)
+    storage = LocalStorage(config)
+
+    generate_characters(
+        config,
+        text_generator=FakeTextGenerator(),
+        storage=storage,
+    )
+
+    character_dir = storage.run_dir / "characters" / "001_Test_Name"
+    character = json.loads(
+        (character_dir / "character.json").read_text(encoding="utf-8")
+    )
+    markdown = (character_dir / "character.md").read_text(encoding="utf-8")
+    assert character["image"] is None
+    assert not (character_dir / "image.png").exists()
+    assert "![" not in markdown
+    assert "画像モデル:" not in markdown
+    assert "## プロフィール" in markdown
+
+
+def test_second_commit_failure_keeps_first_character_and_removes_second(
+    monkeypatch, tmp_path
+):
+    responses = []
+    for index in range(2):
+        responses.extend(
+            [
+                f"Concept {index}",
+                f"Name {index}",
+                f"Profile {index}",
+                f"Catchphrase {index}",
+                f"Ability {index}",
+                f"Want {index}",
+                f"Role {index}",
+            ]
+        )
+    config = make_config(tmp_path, num_iterations=2)
+    storage = LocalStorage(config)
+    original_append_output = storage.append_output
+    calls = 0
+    failure = OSError("second output write failed")
+
+    def fail_second_output(row):
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise failure
+        return original_append_output(row)
+
+    monkeypatch.setattr(storage, "append_output", fail_second_output)
+
+    with pytest.raises(StageError) as error:
+        generate_characters(
+            config,
+            text_generator=FakeTextGenerator(responses=responses),
+            storage=storage,
+        )
+
+    assert error.value.stage == "persistence"
+    assert (storage.run_dir / "characters" / "001_Name_0").is_dir()
+    assert not (storage.run_dir / "characters" / "002_Name_1").exists()
+    assert not list((storage.run_dir / "characters").glob(".tmp_*"))
+    with storage.output_file.open(newline="", encoding="utf-8") as file:
+        assert len(list(csv.reader(file))) == 2
+    assert storage._seed_values["ability"].count("Ability 0") == 1
+    assert "Ability 1" not in storage._seed_values["ability"]
+
+
+def test_image_stage_failure_removes_temporary_character_folder(tmp_path):
+    class FailingImageGenerator:
+        def check_connection(self):
+            pass
+
+        def generate(self, _prompt, output_dir, _filename_stem):
+            output_dir.mkdir(parents=True, exist_ok=True)
+            (output_dir / "image.png.tmp").write_bytes(b"partial")
+            raise RuntimeError("image failed")
+
+    config = make_config(tmp_path, generate_images=True)
+    storage = LocalStorage(config)
+
+    with pytest.raises(StageError) as error:
+        generate_characters(
+            config,
+            text_generator=FakeTextGenerator(),
+            storage=storage,
+            image_generator=FailingImageGenerator(),
+        )
+
+    assert error.value.stage == "image"
+    assert not list((storage.run_dir / "characters").glob(".tmp_*"))
+    assert not (storage.run_dir / "characters" / "001_Test_Name").exists()
 
 
 def test_memory_guard_records_image_stage_and_stops(tmp_path, monkeypatch):
@@ -1202,3 +1363,8 @@ def test_default_image_profile_is_qwen_turbo_with_profile_timeout(monkeypatch, t
 
     assert config.comfyui_model_profile == "qwen-image-2.1-turbo"
     assert config.comfyui_timeout_seconds == 600
+
+
+def test_negative_prompt_is_recorded_only_when_workflow_uses_it():
+    assert app._workflow_uses_negative_prompt("config/comfyui/text2image_api_workflow.json") is True
+    assert app._workflow_uses_negative_prompt("config/comfyui/qwen_image_2_1_viggle_turbo_api_workflow.json") is False

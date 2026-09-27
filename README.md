@@ -226,11 +226,14 @@ python ollama_hero_gen.py --model gpt-oss:120b
 data/
 ├── seed_*.csv                   # シードデータ（全実行で共有・自動拡張）
 ├── run_20260101_120000_000000/
-│   └── output.csv               # 1回目の実行結果
+│   ├── output.csv               # 全キャラクターの索引
+│   └── characters/              # キャラクターごとの完結した出力
 ├── run_20260101_130000_000000/
-│   └── output.csv               # 2回目の実行結果
+│   ├── output.csv
+│   └── characters/
 └── run_20260101_140000_000000/
-    └── output.csv               # 3回目の実行結果
+    ├── output.csv
+    └── characters/
 ```
 
 `output.csv` のカラム構成:
@@ -244,8 +247,14 @@ data/
 | concept | キャラクターコンセプト（英語） |
 | age, gender, species | 身体的属性 |
 | ability, wants, role | 能力・願望・役割 |
-| image_path | 画像生成時のdataディレクトリからの相対パス。未生成時は空欄 |
+| image_path | 画像生成時のrunディレクトリからの相対パス。未生成時は空欄 |
 | image_seed | 画像生成に使ったseed。未生成時は空欄 |
+| character_dir | キャラクター資料（`character.json`、`character.md`、画像）のrunディレクトリからの相対パス |
+
+各キャラクターは `characters/NNN_<safe-name>/` に保存されます。フォルダには
+`character.json`（全設定と生成条件）、`character.md`（日本語の設定資料）があり、
+画像生成を有効にした場合は `image.png` も含まれます。`image_path` と
+`character_dir` はこの実行ディレクトリからの相対パスです。
 
 ### Seed CSV
 
@@ -269,9 +278,13 @@ ollama_hero_gen.py      # メインスクリプト
 data/
 ├── seed_*.csv          # シードデータ（自動生成・拡張、全実行で共有）
 └── run_*/
-    ├── output.csv      # 実行ごとの生成結果（上書きなし）
+    ├── output.csv      # 実行ごとの索引（上書きなし）
     ├── errors.jsonl    # 失敗時のみ作成
-    └── images/         # --generate-images時のみ作成
+    └── characters/     # キャラクターごとの設定資料・画像
+        └── NNN_<safe-name>/
+            ├── character.json
+            ├── character.md
+            └── image.png  # --generate-images時のみ
 ```
 
 選別した画像作例は `examples/` に保存します。モデル比較作例の生成方法は [examples/README.md](examples/README.md) を参照してください。
