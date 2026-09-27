@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "id": "001_Eirian_Nox",
+  "iteration": 1,
+  "created_at": "2026-09-27T11:42:59.735923Z",
+  "name": "Eirian Nox",
+  "height_cm": 165,
+  "profile": "彼は十代後半のジェンダーフルード九尾の狐の見習いで、夢国の国境警備員として働く。夢に入る眠人のパスポートをチェックし、カメラや画面から彼らの存在を消し去る能力を持ち、目に見えないまま国境の整合性を保つ。彼は自分の力を恐れない友人を探している。",
+  "catchphrase": "私は、夢の国の境界を巡る九尾の狐であり、誰もが私の姿を消す力を恐れずに受け入れられる仲間を探し出す。",
+  "concept": "As a late teens genderfluid nine‑tailed fox apprentice, I serve as the Border Guard of the Dream Country, checking passports of sleepers entering dreams. My ability to erase their presence from cameras and screens lets me work unseen while maintaining the border’s integrity. I want to find a friend who is not afraid of my power.",
+  "attributes": {
+    "age": "Late teens",
+    "gender": "Genderfluid",
+    "species": "Nine-tailed fox apprentice",
+    "ability": "Can erase their presence from cameras and screens",
+    "wants": "I want to find a friend who is not afraid of my power.",
+    "role": "Border Guard of the Dream Country. Checks passports of sleepers entering dreams"
+  },
+  "new_seeds": {
+    "ability": "Echoflutter lets you render a person's dreams audible as wind chimes, but only during full moons.",
+    "wants": "I want to give the ancient dream lantern to a child who never sleeps.",
+    "role": "Neural Dream Synthesist. Creates synthetic dreamscapes for therapeutic exploration."
+  },
+  "images": {
+    "full_body": {
+      "file": "full_body.png",
+      "raw_file": "raw/full_body.png",
+      "prompt": "A Late teens Genderfluid Nine-tailed fox apprentice character. Role: Border Guard of the Dream Country. Checks passports of sleepers entering dreams. The character has the ability to erase their presence from cameras and screens. Concept: As a late teens genderfluid nine‑tailed fox apprentice, I serve as the Border Guard of the Dream Country, checking passports of sleepers entering dreams. My ability to erase their presence from cameras and screens lets me work unseen while maintaining the border’s integrity. I want to find a friend who is not afraid of my power. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "negative_prompt": null,
+      "seed": 8447140933956506734,
+      "model_profile": "qwen-image-2.1-turbo",
+      "width": 832,
+      "height": 1216
+    },
+    "turnaround": {
+      "file": "turnaround.png",
+      "raw_file": "raw/turnaround.png",
+      "prompt": "Character turnaround reference sheet of the character in image 1. The same character is shown three times side by side in a T-pose with both arms stretched straight out horizontally: front view on the left, side view in the middle, back view on the right. Each view is full body from head to feet, drawn small enough that the fingertips of the outstretched arms stay well inside the frame. Leave generous empty white margin on all four sides of the image and clear space between the three views; nothing touches or crosses the image edges. The face, hairstyle, outfit, colors, materials and accessories are identical to image 1, with the same body proportions and the same height in all three views. Plain white background, clean anime illustration style, evenly spaced, no text, no labels, no watermark.",
+      "seed": 1383361147696638297,
+      "model_profile": "qwen-image-2.1-turbo",
+      "width": 1664,
+      "height": 832
+    }
+  },
+  "generation": {
+    "llm_provider": "ollama",
+    "llm_model": "gpt-oss:20b"
+  }
+}

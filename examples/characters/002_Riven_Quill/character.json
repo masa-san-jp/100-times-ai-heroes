@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "id": "002_Riven_Quill",
+  "iteration": 2,
+  "created_at": "2026-09-27T11:45:33.021797Z",
+  "name": "Riven Quill",
+  "height_cm": 125,
+  "profile": "彼は未熟年齢の非バイナリーの小悪魔で、ミラー通関官として反射を超えるすべてのものを検査する。彼の能力は、笑う者全員に重力を逆転させることで、喜びの波がしきい値を超えた瞬間に発動する。彼は、予言で描かれた悪役ではないことを証明し、鏡の沈黙に宿る仮定に挑むことを願っている。",
+  "catchphrase": "私は、鏡の境界を歩き、笑いの音で重力を逆転させ、プロフェシーに描かれた悪の像を揺るがす証明になるんだ。",
+  "concept": "A prepubescent agender minor demon on probation works as a Mirror Customs Officer, inspecting everything that crosses between reflections. Their ability to reverse gravity for everyone who laughs manifests whenever a mirthful ripple passes the threshold. They insist they want to prove they are not the villain the prophecy described, challenging the assumption that sits in the mirror’s silence.",
+  "attributes": {
+    "age": "Prepubescent",
+    "gender": "Agender",
+    "species": "Minor demon on probation",
+    "ability": "Can reverse gravity for everyone who laughs",
+    "wants": "I want to prove I am not the villain the prophecy described.",
+    "role": "Mirror Customs Officer. Inspects everything that crosses between reflections"
+  },
+  "new_seeds": {
+    "ability": "Echo Warden can turn whispered thoughts into tangible echoes that trap objects, but only when the speaker stands barefoot on wet stone.",
+    "wants": "I want to prove to the old warden in the mirror vault that my reverse-gravity laugh can calm the tormented souls trapped in the reflection.",
+    "role": "Reflection Resonance Analyst. Maps echo patterns in mirrored portals."
+  },
+  "images": {
+    "full_body": {
+      "file": "full_body.png",
+      "raw_file": "raw/full_body.png",
+      "prompt": "A Prepubescent Agender Minor demon on probation character. Role: Mirror Customs Officer. Inspects everything that crosses between reflections. The character has the ability to reverse gravity for everyone who laughs. Concept: A prepubescent agender minor demon on probation works as a Mirror Customs Officer, inspecting everything that crosses between reflections. Their ability to reverse gravity for everyone who laughs manifests whenever a mirthful ripple passes the threshold. They insist they want to prove they are not the villain the prophecy described, challenging the assumption that sits in the mirror’s silence. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "negative_prompt": null,
+      "seed": 2678853237022303935,
+      "model_profile": "qwen-image-2.1-turbo",
+      "width": 832,
+      "height": 1216
+    },
+    "turnaround": {
+      "file": "turnaround.png",
+      "raw_file": "raw/turnaround.png",
+      "prompt": "Character turnaround reference sheet of the character in image 1. The same character is shown three times side by side in a T-pose with both arms stretched straight out horizontally: front view on the left, side view in the middle, back view on the right. Each view is full body from head to feet, drawn small enough that the fingertips of the outstretched arms stay well inside the frame. Leave generous empty white margin on all four sides of the image and clear space between the three views; nothing touches or crosses the image edges. The face, hairstyle, outfit, colors, materials and accessories are identical to image 1, with the same body proportions and the same height in all three views. Plain white background, clean anime illustration style, evenly spaced, no text, no labels, no watermark.",
+      "seed": 1482716082099856678,
+      "model_profile": "qwen-image-2.1-turbo",
+      "width": 1664,
+      "height": 832
+    }
+  },
+  "generation": {
+    "llm_provider": "ollama",
+    "llm_model": "gpt-oss:20b"
+  }
+}

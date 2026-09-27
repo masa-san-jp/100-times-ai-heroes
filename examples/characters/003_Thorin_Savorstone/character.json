@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "id": "003_Thorin_Savorstone",
+  "iteration": 3,
+  "created_at": "2026-09-27T11:47:59.388117Z",
+  "name": "Thorin Savorstone",
+  "height_cm": 145,
+  "profile": "彼は19歳で凍結されて200年が経過した男性ドワーフで、役割はTaste Translator（味覚翻訳者）です。味を音楽に変換し、味覚を持たない人々へ届けることができ、動物の思考を詩として聴き取る能力も備えています。願望は、都市のすべての人々が争いなく共有できる記憶を設計することです。",
+  "catchphrase": "私は、氷に閉じ込められた二百年の若き矮人として、味覚を失った者に音楽を奏で、動物の心音を詩に変えて、争いのない共鳴する記憶を街に刻むよ。",
+  "concept": "He is a Male Dwarf, frozen at nineteen for two hundred years, who serves as a Taste Translator, converting flavors into music for people who cannot taste. He can hear the thoughts of animals as poetry. He wants to design a memory that everyone in the city can share without fighting.",
+  "attributes": {
+    "age": "Frozen at nineteen for two hundred years",
+    "gender": "Male",
+    "species": "Dwarf",
+    "ability": "Can hear the thoughts of animals as poetry",
+    "wants": "I want to design a memory that everyone in the city can share without fighting.",
+    "role": "Taste Translator. Converts flavors into music for people who cannot taste"
+  },
+  "new_seeds": {
+    "ability": "Can transform the scent of a forgotten dream into a temporary reality, but only while holding a single feather.",
+    "wants": "I want to bring my father's heirloom sword back to the village hall.",
+    "role": "Holo-Recall Designer. Synthesizes collective memories into immersive VR symphonies."
+  },
+  "images": {
+    "full_body": {
+      "file": "full_body.png",
+      "raw_file": "raw/full_body.png",
+      "prompt": "A Frozen at nineteen for two hundred years Male Dwarf character. Role: Taste Translator. Converts flavors into music for people who cannot taste. The character has the ability to hear the thoughts of animals as poetry. Concept: He is a Male Dwarf, frozen at nineteen for two hundred years, who serves as a Taste Translator, converting flavors into music for people who cannot taste. He can hear the thoughts of animals as poetry. He wants to design a memory that everyone in the city can share without fighting. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "negative_prompt": null,
+      "seed": 3460173825447963969,
+      "model_profile": "qwen-image-2.1-turbo",
+      "width": 832,
+      "height": 1216
+    },
+    "turnaround": {
+      "file": "turnaround.png",
+      "raw_file": "raw/turnaround.png",
+      "prompt": "Character turnaround reference sheet of the character in image 1. The same character is shown three times side by side in a T-pose with both arms stretched straight out horizontally: front view on the left, side view in the middle, back view on the right. Each view is full body from head to feet, drawn small enough that the fingertips of the outstretched arms stay well inside the frame. Leave generous empty white margin on all four sides of the image and clear space between the three views; nothing touches or crosses the image edges. The face, hairstyle, outfit, colors, materials and accessories are identical to image 1, with the same body proportions and the same height in all three views. Plain white background, clean anime illustration style, evenly spaced, no text, no labels, no watermark.",
+      "seed": 6704333035696018867,
+      "model_profile": "qwen-image-2.1-turbo",
+      "width": 1664,
+      "height": 832
+    }
+  },
+  "generation": {
+    "llm_provider": "ollama",
+    "llm_model": "gpt-oss:20b"
+  }
+}
