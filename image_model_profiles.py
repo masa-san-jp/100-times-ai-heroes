@@ -53,6 +53,10 @@ class ImageModelProfile:
     custom_nodes: List[dict] = field(default_factory=list)
     license_note: str = ""
     timeout_seconds: float = 300.0
+    turnaround_workflow_path: Optional[str] = None
+    turnaround_width: Optional[int] = None
+    turnaround_height: Optional[int] = None
+    turnaround_timeout_seconds: Optional[float] = None
 
 
 BUILTIN_PROFILES: Dict[str, ImageModelProfile] = {
@@ -186,6 +190,26 @@ def _profile_from_dict(profile_id: str, value: dict) -> ImageModelProfile:
         custom_nodes=_parse_custom_nodes(profile_id, value.get("custom_nodes", [])),
         license_note=str(value.get("license_note", "")),
         timeout_seconds=float(value.get("timeout_seconds", 300)),
+        turnaround_workflow_path=(
+            str(value["turnaround_workflow_path"])
+            if value.get("turnaround_workflow_path")
+            else None
+        ),
+        turnaround_width=(
+            int(value["turnaround_width"])
+            if value.get("turnaround_width") is not None
+            else None
+        ),
+        turnaround_height=(
+            int(value["turnaround_height"])
+            if value.get("turnaround_height") is not None
+            else None
+        ),
+        turnaround_timeout_seconds=(
+            float(value["turnaround_timeout_seconds"])
+            if value.get("turnaround_timeout_seconds") is not None
+            else None
+        ),
     )
 
 

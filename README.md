@@ -247,14 +247,21 @@ data/
 | concept | キャラクターコンセプト（英語） |
 | age, gender, species | 身体的属性 |
 | ability, wants, role | 能力・願望・役割 |
-| image_path | 画像生成時のrunディレクトリからの相対パス。未生成時は空欄 |
-| image_seed | 画像生成に使ったseed。未生成時は空欄 |
+| image_path | 名前・身長入り全身像のrunディレクトリからの相対パス。未生成時は空欄 |
+| image_seed | 全身像の画像生成に使ったseed。未生成時は空欄 |
+| turnaround_path | 名前・身長入り3面図のrunディレクトリからの相対パス。未生成時は空欄 |
+| height_cm | キャラクターの身長（cm） |
 | character_dir | キャラクター資料（`character.json`、`character.md`、画像）のrunディレクトリからの相対パス |
 
 各キャラクターは `characters/NNN_<safe-name>/` に保存されます。フォルダには
 `character.json`（全設定と生成条件）、`character.md`（日本語の設定資料）があり、
-画像生成を有効にした場合は `image.png` も含まれます。`image_path` と
-`character_dir` はこの実行ディレクトリからの相対パスです。
+画像生成を有効にした場合は、帯付きの `full_body.png` と `turnaround.png`、
+帯なしの元画像を `raw/full_body.png` と `raw/turnaround.png` に保存します。
+`image_path`、`turnaround_path`、`character_dir` はこの実行ディレクトリからの相対パスです。
+
+画像生成を有効にすると、全身像まで約4.5分、3面図に約4〜5分、1体あたり合計約9分が目安です。
+100体では約15時間かかります。3面図が不要な場合は `--no-turnaround`、または
+`GENERATE_TURNAROUND=false` を指定できます。
 
 ### Seed CSV
 
@@ -284,7 +291,11 @@ data/
         └── NNN_<safe-name>/
             ├── character.json
             ├── character.md
-            └── image.png  # --generate-images時のみ
+            ├── full_body.png
+            ├── turnaround.png
+            └── raw/
+                ├── full_body.png
+                └── turnaround.png
 ```
 
 選別した画像作例は `examples/` に保存します。モデル比較作例の生成方法は [examples/README.md](examples/README.md) を参照してください。
