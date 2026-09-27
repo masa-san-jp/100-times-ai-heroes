@@ -1,63 +1,276 @@
-# モデル比較作例
+# モデル比較（2026-09-27）
 
-同じcase・同じseedの画像をモデル間で比較し、以下を確認します。
+## 人間の戦士（`human-warrior`）
 
-- 全身と足元が収まっている
-- キャラクターが1人だけである
-- 顔、手、四肢が破綻していない
-- species、role、abilityが衣装や小道具に反映されている
-- 白背景とJRPG系の画風が維持されている
-- 文字、署名、透かし、重複人物がない
+### 指示文
 
-## 2026-09-27 の比較結果（Issue #10）
+- age: young adult
+- gender: male
+- species: human
+- role: Swordsman, disciplined guardian
+- ability: Can cut through digital noise with a single stroke
+- concept: A young human swordsman who protects people from information chaos with a calm sense of duty.
 
-### 結論
+### Animagine XL 4.0
 
-**既定モデルは Animagine XL 4.0（`animagine-xl-4.0-opt`）のままとする。**
+```text
+1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, high score, great score, absurdres, A young human swordsman who protects people from information chaos with a calm sense of duty.
+```
 
-- 画質・白背景・破綻のなさ、そして設定の反映も、全体では Qwen-Image 2.1 が最もよかった
-- それでも既定にしない理由は、ライセンスが研究・評価目的に限られること（作品に使えない）と、1枚に約9分かかること（Animagine は約2分）。Qwen は品質の参考として実験候補に残す
-- Animagine は、商用利用できる SDXL の4モデルの中で致命的な失敗が0件で、設定の反映も最もよかった
-- Illustrious・Pony・NoobAI は採用しない（下の所見を参照）
+除外語:
 
-### 実施条件
+```text
+lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry
+```
 
-- 環境: M4 Max（128GB、MPS）、ComfyUI v0.37.4、Python 3.13、torch 2.14.0
-- 固定ケース3種（`human-warrior`、`aquatic-designer`、`lycanthrope-artist`）× seed 2つ（101、202）× 5モデル = 30枚
-- プロンプト、除外語、サイズ、steps、cfg は **各モデルの推奨設定**（`--prompt-mode recommended` 相当）。モデル間でプロンプトを完全には統一していない。同一条件での比較は `tools/benchmark_image_models.py --prompt-mode shared`（#27）で実行できる
-- 全プロンプト、条件、1枚ごとの所要時間は [`report.json`](report.json) に記録
+| seed 101 | seed 202 |
+|---|---|
+| ![Animagine XL 4.0 human-warrior seed 101](animagine-xl-4.0-opt/human-warrior_101.jpg) | ![Animagine XL 4.0 human-warrior seed 202](animagine-xl-4.0-opt/human-warrior_202.jpg) |
 
-### 採点（Claude の下書き、1枚12点満点の平均）
+### Illustrious XL v2.0
 
-| モデル | 平均点 | 致命的な失敗 | 1枚の時間 | ライセンス |
-|---|---|---|---|---|
-| Qwen-Image 2.1 | 約11.3 | 0/6 | 約530秒 | 研究・評価目的のみ |
-| **Animagine XL 4.0** | 約10.3 | 0/6 | 約133秒 | CreativeML Open RAIL++-M |
-| NoobAI XL 1.1 | 約10 | 1/6 | 約105秒 | Fair AI Public License 1.0-SD |
-| Pony Diffusion V6 XL | 約9 | 0/6（缶の誤解釈が3/6） | 約99秒 | 利用制限あり |
-| Illustrious XL v2.0 | ― | 4/6 | 約130秒 | CreativeML Open RAIL-M |
+```text
+1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, high score, great score, absurdres, A young human swordsman who protects people from information chaos with a calm sense of duty.
+```
 
-### モデルごとの所見
+除外語:
 
-- **Animagine**: 6枚とも全身・1人。剣士には2枚とも剣を持たせた。ただし半魚人と狼男の要素は、キャラクター本人ではなく背景の演出（水流、巨大な魚、狼の顔）で表すことが多く、本人の体に反映されたのは狼男の1枚だけ。「中年」は2枚とも若く描いた。タトゥー作家は服の紋様になり、タトゥーとしては描けていない。背景に派手な効果が入り白背景にならず、女性キャラクターの露出がやや多い
-- **Qwen-Image 2.1**: 6枚とも白背景・全身・破綻なし。半魚人は本人の体が鱗と尾びれになり、「中年」も2枚とも正しく描けた。タトゥーも鮮明で、色鮮やかな表現が能力（感情を色として吸収する）に合っている。一方、剣士に剣を持たせず、狼男は2枚とも人間として描いた
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
 
-| 設定 | Animagine | Qwen |
-|---|---|---|
-| 剣士に剣（役割） | 2/2 | 0/2 |
-| 半人半魚（本人の体） | 0/2（背景の演出のみ） | 2/2 |
-| 狼男（本人の体） | 1/2 | 0/2 |
-| 中年（年齢） | 0/2 | 2/2 |
-| タトゥー（役割・能力） | 0/2（服の紋様） | 2/2 |
-- **NoobAI**: 構図は安定しているが種族がほぼ反映されない。「若い成人の剣士」が子どもに見える上半身裸の少年になった（致命的）。女性は水着姿になった
-- **Pony**: 構図は安定しているが種族が反映されない。能力の文「Can ...」を缶と解釈し、6枚中3枚で缶を持った
-- **Illustrious**: 缶だけの絵、脚だけの絵、裸体、背景が物で埋まる絵と、6枚中4枚が致命的な失敗
+| seed 101 | seed 202 |
+|---|---|
+| ![Illustrious XL v2.0 human-warrior seed 101](illustrious-xl-v2/human-warrior_101.jpg) | ![Illustrious XL v2.0 human-warrior seed 202](illustrious-xl-v2/human-warrior_202.jpg) |
 
-公開リポジトリのため、画像は Animagine と Qwen の縮小版だけを置いています。ほかのモデルの画像には裸体や子どもに見える人物が含まれるため、リポジトリには含めていません。
+### Pony Diffusion V6 XL
 
-### この比較で見つかり、修正した不具合
+```text
+1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, source_anime, score_9, score_8_up, score_7_up, A young human swordsman who protects people from information chaos with a calm sense of duty.
+```
 
-- `CLIPSetLastLayer(-1)` を経由すると、現在の ComfyUI では SDXL の画像がノイズ状になる（#26 で修正）
-- 能力の文が「Can ...」で始まると缶として描かれる（#27 で「ability to ...」に正規化）
-- 除外語に `nsfw` などがなく、裸体や子どもに見える人物が出る（#27 で全モデルに追加）
-- ベンチマークの待ち時間が300秒固定で、Qwen が全件タイムアウトした（#27 でモデルごとに設定可能に。今回の Qwen の画像は ComfyUI の履歴から回収）
+除外語:
+
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Pony Diffusion V6 XL human-warrior seed 101](pony-v6-xl/human-warrior_101.jpg) | ![Pony Diffusion V6 XL human-warrior seed 202](pony-v6-xl/human-warrior_202.jpg) |
+
+### NoobAI XL 1.1
+
+```text
+1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, best quality, highly detailed, A young human swordsman who protects people from information chaos with a calm sense of duty.
+```
+
+除外語:
+
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![NoobAI XL 1.1 human-warrior seed 101](noobai-xl-1.1/human-warrior_101.jpg) | （掲載なし） |
+
+### Qwen-Image 2.1
+
+```text
+A young adult male human character whose role is Swordsman, disciplined guardian and whose ability is Can cut through digital noise with a single stroke. The character is based on the concept: A young human swordsman who protects people from information chaos with a calm sense of duty.. Full body, single character, plain white background, anime illustration style, no text or watermark.
+```
+
+除外語:
+
+```text
+（なし）
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Qwen-Image 2.1 human-warrior seed 101](qwen-image-2.1/human-warrior_101.jpg) | ![Qwen-Image 2.1 human-warrior seed 202](qwen-image-2.1/human-warrior_202.jpg) |
+
+## 水棲のデザイナー（`aquatic-designer`）
+
+### 指示文
+
+- age: adult
+- gender: female
+- species: half-human half-aquatic woman
+- role: Nostalgic Experience Designer
+- ability: Can reverse causality through rhythmic movement
+- concept: An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.
+
+### Animagine XL 4.0
+
+```text
+1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, high score, great score, absurdres, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.
+```
+
+除外語:
+
+```text
+lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Animagine XL 4.0 aquatic-designer seed 101](animagine-xl-4.0-opt/aquatic-designer_101.jpg) | ![Animagine XL 4.0 aquatic-designer seed 202](animagine-xl-4.0-opt/aquatic-designer_202.jpg) |
+
+### Illustrious XL v2.0
+
+```text
+1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, high score, great score, absurdres, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.
+```
+
+除外語:
+
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| （掲載なし） | ![Illustrious XL v2.0 aquatic-designer seed 202](illustrious-xl-v2/aquatic-designer_202.jpg) |
+
+### Pony Diffusion V6 XL
+
+```text
+1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, source_anime, score_9, score_8_up, score_7_up, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.
+```
+
+除外語:
+
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Pony Diffusion V6 XL aquatic-designer seed 101](pony-v6-xl/aquatic-designer_101.jpg) | ![Pony Diffusion V6 XL aquatic-designer seed 202](pony-v6-xl/aquatic-designer_202.jpg) |
+
+### NoobAI XL 1.1
+
+```text
+1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, best quality, highly detailed, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.
+```
+
+除外語:
+
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| （掲載なし） | （掲載なし） |
+
+### Qwen-Image 2.1
+
+```text
+An adult female half-human half-aquatic woman character whose role is Nostalgic Experience Designer and whose ability is Can reverse causality through rhythmic movement. The character is based on the concept: An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.. Full body, single character, plain white background, anime illustration style, no text or watermark.
+```
+
+除外語:
+
+```text
+（なし）
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Qwen-Image 2.1 aquatic-designer seed 101](qwen-image-2.1/aquatic-designer_101.jpg) | ![Qwen-Image 2.1 aquatic-designer seed 202](qwen-image-2.1/aquatic-designer_202.jpg) |
+
+## 狼男のアーティスト（`lycanthrope-artist`）
+
+### 指示文
+
+- age: middle-aged
+- gender: male
+- species: lycanthrope
+- role: Biotechnology Tattoo Artist
+- ability: Can absorb emotions as colors and animate tattoos
+- concept: A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.
+
+### Animagine XL 4.0
+
+```text
+1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, high score, great score, absurdres, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.
+```
+
+除外語:
+
+```text
+lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Animagine XL 4.0 lycanthrope-artist seed 101](animagine-xl-4.0-opt/lycanthrope-artist_101.jpg) | ![Animagine XL 4.0 lycanthrope-artist seed 202](animagine-xl-4.0-opt/lycanthrope-artist_202.jpg) |
+
+### Illustrious XL v2.0
+
+```text
+1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, high score, great score, absurdres, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.
+```
+
+除外語:
+
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Illustrious XL v2.0 lycanthrope-artist seed 101](illustrious-xl-v2/lycanthrope-artist_101.jpg) | ![Illustrious XL v2.0 lycanthrope-artist seed 202](illustrious-xl-v2/lycanthrope-artist_202.jpg) |
+
+### Pony Diffusion V6 XL
+
+```text
+1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, source_anime, score_9, score_8_up, score_7_up, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.
+```
+
+除外語:
+
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Pony Diffusion V6 XL lycanthrope-artist seed 101](pony-v6-xl/lycanthrope-artist_101.jpg) | ![Pony Diffusion V6 XL lycanthrope-artist seed 202](pony-v6-xl/lycanthrope-artist_202.jpg) |
+
+### NoobAI XL 1.1
+
+```text
+1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, best quality, highly detailed, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.
+```
+
+除外語:
+
+```text
+low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![NoobAI XL 1.1 lycanthrope-artist seed 101](noobai-xl-1.1/lycanthrope-artist_101.jpg) | ![NoobAI XL 1.1 lycanthrope-artist seed 202](noobai-xl-1.1/lycanthrope-artist_202.jpg) |
+
+### Qwen-Image 2.1
+
+```text
+A middle-aged male lycanthrope character whose role is Biotechnology Tattoo Artist and whose ability is Can absorb emotions as colors and animate tattoos. The character is based on the concept: A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.. Full body, single character, plain white background, anime illustration style, no text or watermark.
+```
+
+除外語:
+
+```text
+（なし）
+```
+
+| seed 101 | seed 202 |
+|---|---|
+| ![Qwen-Image 2.1 lycanthrope-artist seed 101](qwen-image-2.1/lycanthrope-artist_101.jpg) | ![Qwen-Image 2.1 lycanthrope-artist seed 202](qwen-image-2.1/lycanthrope-artist_202.jpg) |
+
+全プロンプトと生成条件は [report.json](report.json) にあります。
