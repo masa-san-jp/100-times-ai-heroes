@@ -293,27 +293,36 @@ def _tag_phrase(value: str) -> str:
     return _compact(value).replace(";", ",")
 
 
+_ABILITY_PREFIX = re.compile(
+    r"^(?:can|is able to|able to|has the (?:ability|power) to|ability to)\s+",
+    re.IGNORECASE,
+)
+
+
 def normalize_ability_text(ability: str) -> str:
-    """画像プロンプト向けに能力文の先頭表現をそろえる。"""
-    text = str(ability or "")
-    text = re.sub(r"^Can ", "ability to ", text, count=1, flags=re.IGNORECASE)
-    text = re.sub(
-        r"^Has the ability to ",
-        "ability to ",
-        text,
-        count=1,
-        flags=re.IGNORECASE,
-    )
-    return text
+    """画像プロンプト向けに能力文を正規化する。
+
+    LLM は「Has the ability to X: Can Y.」のように書くため、区切りごとの
+    先頭の Can などを取り除く（タグ形式で「缶」と解釈されるのを防ぐ）。
+    """
+    text = " ".join(str(ability or "").split())
+    clauses = [c.strip().rstrip(".") for c in re.split(r"\s*[:;]\s*|(?<=\.)\s+", text)]
+    clauses = [c for c in clauses if c]
+    if not clauses:
+        return ""
+    had_prefix = bool(_ABILITY_PREFIX.match(clauses[0]))
+    clauses = [_ABILITY_PREFIX.sub("", c, count=1) for c in clauses]
+    joined = "; ".join(clauses)
+    return f"ability to {joined}" if had_prefix else joined
 
 
-def _ability_action(ability: str) -> str:
-    """能力文から、自然文の ``has the ability to`` に続く部分を返す。"""
-    normalized = normalize_ability_text(ability)
+def _ability_sentence(normalized_ability: str) -> str:
+    if not normalized_ability:
+        return ""
     prefix = "ability to "
-    if normalized.lower().startswith(prefix):
-        return normalized[len(prefix) :]
-    return normalized
+    if normalized_ability.lower().startswith(prefix):
+        return f"The character has the ability to {normalized_ability[len(prefix):]}."
+    return f"Special ability: {_with_terminal_period(normalized_ability)}"
 
 
 def _with_terminal_period(text: str) -> str:
@@ -344,20 +353,15 @@ def build_image_prompt(
         subject = f"{subject} character" if subject else "character"
         article = "an" if subject[0].lower() in "aeiou" else "a"
         role_text = _compact(role)
-        ability_action = _ability_action(normalized_ability)
         concept_text = _compact(concept)
-        sentences = [
-            f"{article.capitalize()} {subject} whose role is {role_text}"
-            if role_text
-            else f"{article.capitalize()} {subject}",
-        ]
-        if ability_action:
-            sentences[0] += f" and who has the ability to {ability_action}"
-        sentences[0] = _with_terminal_period(sentences[0])
+        sentences = [f"{article.capitalize()} {subject}."]
+        if role_text:
+            sentences.append(f"Role: {_with_terminal_period(role_text)}")
+        ability_text = _ability_sentence(normalized_ability)
+        if ability_text:
+            sentences.append(ability_text)
         if concept_text:
-            sentences.append(
-                f"The character is based on the concept: {_with_terminal_period(concept_text)}"
-            )
+            sentences.append(f"Concept: {_with_terminal_period(concept_text)}")
         sentences.append(
             "Full body, single character, plain white background, anime illustration style, "
             "no text or watermark."
@@ -365,12 +369,8 @@ def build_image_prompt(
         return " ".join(sentences)
 
     if profile.prompt_style == "prose":
-        ability_action = _ability_action(normalized_ability)
-        ability_clause = (
-            f" The character has the ability to {ability_action}."
-            if ability_action
-            else ""
-        )
+        ability_sentence = _ability_sentence(normalized_ability)
+        ability_clause = f" {ability_sentence}" if ability_sentence else ""
         return (
             "The full-length character illustration from video games, likely from "
             "role-playing games (JRPG) or fighting games. A camera angle that captures "
