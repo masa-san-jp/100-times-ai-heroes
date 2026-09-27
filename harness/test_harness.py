@@ -191,7 +191,7 @@ def test_ability_normalizer_is_used_by_all_prompt_styles(profile_id):
     assert "Can cut through digital noise" not in prompt
     if profile.prompt_style == "natural":
         assert ".." not in prompt
-        assert "who has the ability to cut through digital noise" in prompt
+        assert "The character has the ability to cut through digital noise." in prompt
 
 
 def test_normalize_ability_text_rules_are_exact():
@@ -1368,3 +1368,39 @@ def test_default_image_profile_is_qwen_turbo_with_profile_timeout(monkeypatch, t
 def test_negative_prompt_is_recorded_only_when_workflow_uses_it():
     assert app._workflow_uses_negative_prompt("config/comfyui/text2image_api_workflow.json") is True
     assert app._workflow_uses_negative_prompt("config/comfyui/qwen_image_2_1_viggle_turbo_api_workflow.json") is False
+
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("Possesses superhuman strength", "Possesses superhuman strength"),
+        (
+            "Has the ability to phase through matter: Can slip into solid objects to evade attacks.",
+            "ability to phase through matter; slip into solid objects to evade attacks",
+        ),
+        ("Can control time for brief moments.", "ability to control time for brief moments"),
+        ("", ""),
+    ],
+)
+def test_normalize_ability_handles_llm_phrasings(raw, expected):
+    assert normalize_ability_text(raw) == expected
+
+
+def test_natural_prompt_stays_grammatical_for_free_form_llm_text():
+    profile = get_image_model_profile("qwen-image-2.1", PROJECT_ROOT / "config/comfyui/model_profiles.json")
+    prompt = build_image_prompt(
+        profile,
+        concept="A healer who protects the innocent.",
+        age="Middle-aged",
+        gender="Male",
+        species="Dwarf",
+        ability="Possesses superhuman strength",
+        role="Healer. A compassionate soul devoted to saving lives",
+    )
+
+    assert prompt.startswith("A Middle-aged Male Dwarf character. Role: Healer. A compassionate soul")
+    assert "Special ability: Possesses superhuman strength." in prompt
+    assert "ability to Possesses" not in prompt
+    assert ".." not in prompt
+    assert " Can " not in prompt
