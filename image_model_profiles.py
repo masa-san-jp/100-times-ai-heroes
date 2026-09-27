@@ -46,6 +46,7 @@ class ImageModelProfile:
     notes: str = ""
     source_url: str = ""
     license_name: str = ""
+    license_url: str = ""
     model_sha256: str = ""
     workflow_path: str = DEFAULT_WORKFLOW_PATH
     model_files: List[ImageModelFile] = field(default_factory=list)
@@ -168,6 +169,7 @@ def _profile_from_dict(profile_id: str, value: dict) -> ImageModelProfile:
         notes=str(value.get("notes", "")),
         source_url=str(value.get("source_url", "")),
         license_name=str(value.get("license_name", "")),
+        license_url=str(value.get("license_url", "")),
         model_sha256=str(value.get("model_sha256", "")),
         workflow_path=str(value.get("workflow_path", DEFAULT_WORKFLOW_PATH)),
         model_files=[
