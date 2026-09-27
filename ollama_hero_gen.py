@@ -12,6 +12,7 @@ import csv
 import json
 import os
 import random
+import shutil
 import sys
 import time
 from dataclasses import dataclass, replace
@@ -408,6 +409,7 @@ class LocalStorage:
         "role",
         "image_path",
         "image_seed",
+        "character_dir",
     ]
 
     DEFAULT_SEEDS = {
@@ -481,6 +483,7 @@ class LocalStorage:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
         self.run_dir = self.data_dir / f"run_{timestamp}"
         self.run_dir.mkdir(parents=True, exist_ok=True)
+        self.characters_dir = self.run_dir / "characters"
         self.output_file = self.run_dir / "output.csv"
         self.errors_file = self.run_dir / "errors.jsonl"
 
@@ -578,7 +581,11 @@ class LocalStorage:
         self._seed_values[attr_type].append(normalized)
 
     def commit_character(
-        self, row: List[Any], seed_updates: Dict[str, str]
+        self,
+        row: List[Any],
+        seed_updates: Dict[str, str],
+        character_data: Optional[Dict[str, Any]] = None,
+        temporary_dir: Optional[Path] = None,
     ) -> None:
         """生成済みの1キャラクターを保存する。生成途中では呼び出さない。"""
         rollback_targets = [
@@ -593,7 +600,22 @@ class LocalStorage:
             for attr_type in ("ability", "wants", "role")
         }
 
+        character_id = (
+            str(character_data["id"])
+            if character_data is not None
+            else (str(row[-1]).split("/")[-1] or "legacy_character")
+        )
+        final_dir = self.characters_dir / character_id
+        temp_dir = Path(temporary_dir) if temporary_dir is not None else (
+            self.characters_dir / f".tmp_{character_id}"
+        )
+
         try:
+            self.characters_dir.mkdir(parents=True, exist_ok=True)
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            if character_data is not None:
+                self._write_character_files(temp_dir, character_data)
+            temp_dir.replace(final_dir)
             self.append_output(row)
             for attr_type in ("ability", "wants", "role"):
                 self.append_seed(attr_type, seed_updates[attr_type])
@@ -610,12 +632,71 @@ class LocalStorage:
             for attr_type, length in seed_lengths.items():
                 del self._seed_values[attr_type][length:]
 
-            if rollback_failures:
-                paths = ", ".join(rollback_failures)
+            cleanup_failures = []
+            for path in (temp_dir, final_dir):
+                try:
+                    if path.exists():
+                        shutil.rmtree(path)
+                except BaseException:
+                    cleanup_failures.append(str(path))
+
+            if rollback_failures or cleanup_failures:
+                paths = ", ".join(rollback_failures + cleanup_failures)
                 raise RuntimeError(
                     f"Commit rollback failed; manually check: {paths}"
                 ) from original_error
             raise
+
+    def _write_character_files(
+        self, directory: Path, character_data: Dict[str, Any]
+    ) -> None:
+        directory.mkdir(parents=True, exist_ok=True)
+        with (directory / "character.json").open("w", encoding="utf-8") as file:
+            json.dump(character_data, file, ensure_ascii=False, indent=2)
+            file.write("\n")
+
+        image = character_data["image"]
+        lines = [f"# {character_data['name']}", ""]
+        if image is not None:
+            lines.extend([f"![{character_data['name']}](image.png)", ""])
+        lines.extend(
+            [
+                f"> {character_data['catchphrase']}",
+                "",
+                "## プロフィール",
+                character_data["profile"],
+                "",
+                "## 設定",
+                f"- 年齢: {character_data['attributes']['age']}",
+                f"- 性別: {character_data['attributes']['gender']}",
+                f"- 種族: {character_data['attributes']['species']}",
+                f"- 役割: {character_data['attributes']['role']}",
+                f"- 能力: {character_data['attributes']['ability']}",
+                f"- 願い: {character_data['attributes']['wants']}",
+                "",
+                "## コンセプト",
+                character_data["concept"],
+                "",
+                "## 生成条件",
+            ]
+        )
+        if image is not None:
+            lines.extend(
+                [
+                    f"- 画像モデル: {image['model_profile']}（seed {image['seed']}）",
+                    f"- LLM: {character_data['generation']['llm_provider']} / "
+                    f"{character_data['generation']['llm_model']}",
+                    f"- 画像プロンプト: {image['prompt']}",
+                ]
+            )
+        else:
+            lines.append(
+                f"- LLM: {character_data['generation']['llm_provider']} / "
+                f"{character_data['generation']['llm_model']}"
+            )
+        (directory / "character.md").write_text(
+            "\n".join(lines) + "\n", encoding="utf-8"
+        )
 
     def record_error(
         self,
@@ -637,6 +718,16 @@ class LocalStorage:
 
     def relative_path(self, path: Path) -> str:
         return path.relative_to(self.data_dir).as_posix()
+
+    def relative_run_path(self, path: Path) -> str:
+        return path.relative_to(self.run_dir).as_posix()
+
+    def character_paths(self, iteration: int, name: str) -> tuple[Path, Path]:
+        character_id = f"{iteration:03d}_{_safe_filename(name)}"
+        return (
+            self.characters_dir / f".tmp_{character_id}",
+            self.characters_dir / character_id,
+        )
 
 
 # =============================================================================
@@ -807,6 +898,15 @@ def _stage(stage: str, function: Callable[[], Any]) -> Any:
         raise StageError(stage, exc) from exc
 
 
+def _workflow_uses_negative_prompt(workflow_path: str) -> bool:
+    from comfyui_image_gen import SDXL_INJECTIONS, WORKFLOW_CONFIGS
+
+    config = WORKFLOW_CONFIGS.get(
+        Path(workflow_path).name, {"injections": SDXL_INJECTIONS}
+    )
+    return "negative_prompt" in config["injections"]
+
+
 def _safe_filename(value: str) -> str:
     normalized = "".join(
         char if char.isalnum() or char in {"-", "_", "."} else "_"
@@ -864,6 +964,7 @@ def generate_characters(
     for index in range(config.num_iterations):
         iteration = index + 1
         print(f"\n[{iteration}/{config.num_iterations}] Generating character...")
+        temporary_dir: Optional[Path] = None
         try:
             age = local_storage.get_random_attribute("age")
             gender = local_storage.get_random_attribute("gender")
@@ -907,8 +1008,15 @@ def generate_characters(
                 "new_role", lambda: llm.generate(Prompts.new_role(concept))
             )
 
+            character_id = f"{iteration:03d}_{_safe_filename(name)}"
+            temporary_dir, final_character_dir = local_storage.character_paths(
+                iteration, name
+            )
+            local_storage.characters_dir.mkdir(parents=True, exist_ok=True)
+            temporary_dir.mkdir(parents=True, exist_ok=True)
             image_path = ""
             image_seed = ""
+            image_data: Optional[Dict[str, Any]] = None
             if config.generate_images:
                 def generate_image() -> Any:
                     if config.memory_guard_enabled:
@@ -923,18 +1031,69 @@ def generate_characters(
                                 "  Available memory before image: "
                                 f"{memory.available_percent:.1f}%"
                             )
-                    return image_generator.generate(
+                    result = image_generator.generate(
                         image_prompt,
-                        local_storage.run_dir / "images",
-                        f"{iteration:03d}_{_safe_filename(name)}",
+                        temporary_dir,
+                        "image",
                     )
+                    image_file = temporary_dir / "image.png"
+                    generated_path = Path(result.path)
+                    if generated_path != image_file:
+                        generated_path.replace(image_file)
+                    return result
 
                 image_result = _stage(
                     "image",
                     generate_image,
                 )
-                image_path = local_storage.relative_path(image_result.path)
+                image_path = local_storage.relative_run_path(
+                    final_character_dir / "image.png"
+                )
                 image_seed = str(image_result.seed)
+                image_data = {
+                    "file": "image.png",
+                    "prompt": image_prompt,
+                    "negative_prompt": (
+                        config.comfyui_negative_prompt
+                        if _workflow_uses_negative_prompt(config.comfyui_workflow_path)
+                        else None
+                    ),
+                    "seed": image_result.seed,
+                    "model_profile": config.comfyui_model_profile,
+                    "width": config.comfyui_width,
+                    "height": config.comfyui_height,
+                }
+
+            character_data = {
+                "schema_version": 1,
+                "id": character_id,
+                "iteration": iteration,
+                "created_at": datetime.now(timezone.utc)
+                .isoformat()
+                .replace("+00:00", "Z"),
+                "name": name,
+                "profile": profile,
+                "catchphrase": catchphrase,
+                "concept": concept,
+                "attributes": {
+                    "age": age,
+                    "gender": gender,
+                    "species": species,
+                    "ability": ability,
+                    "wants": wants,
+                    "role": role,
+                },
+                "new_seeds": {
+                    "ability": new_ability,
+                    "wants": new_wants,
+                    "role": new_role,
+                },
+                "image": image_data,
+                "generation": {
+                    "llm_provider": config.provider,
+                    "llm_model": config.model,
+                },
+            }
 
             row = [
                 name,
@@ -950,6 +1109,7 @@ def generate_characters(
                 role,
                 image_path,
                 image_seed,
+                local_storage.relative_run_path(final_character_dir),
             ]
             _stage(
                 "persistence",
@@ -960,6 +1120,8 @@ def generate_characters(
                         "wants": new_wants,
                         "role": new_role,
                     },
+                    character_data=character_data,
+                    temporary_dir=temporary_dir,
                 ),
             )
             print(f"  Name: {name}")
@@ -979,6 +1141,9 @@ def generate_characters(
                 file=sys.stderr,
             )
             raise StageError("input", exc) from exc
+        finally:
+            if temporary_dir is not None and temporary_dir.exists():
+                shutil.rmtree(temporary_dir, ignore_errors=True)
 
     print("\n処理が完了しました。")
     print(f"実行ディレクトリ: {local_storage.run_dir}")
