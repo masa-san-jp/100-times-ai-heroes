@@ -1,0 +1,739 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-27T05:12:40.995669+00:00",
+  "dry_run": false,
+  "host": "macOS-26.5-arm64-arm-64bit-Mach-O",
+  "profiles": [
+    {
+      "profile_id": "animagine-xl-4.0-opt",
+      "checkpoint_name": "animagine-xl-4.0-opt.safetensors",
+      "prompt_style": "animagine",
+      "width": 832,
+      "height": 1216,
+      "steps": 28,
+      "cfg": 5.0,
+      "sampler": "euler_ancestral",
+      "scheduler": "normal",
+      "negative_prompt": "lowres, bad anatomy, bad hands, text, error, missing finger, extra digits, fewer digits, cropped, worst quality, low quality, low score, bad score, average score, signature, watermark, username, blurry",
+      "clip_skip": null,
+      "experimental": false,
+      "notes": "アニメ・JRPG系の第一比較候補。",
+      "source_url": "https://huggingface.co/cagliostrolab/animagine-xl-4.0",
+      "license_name": "CreativeML Open RAIL++-M",
+      "model_sha256": "6327eca98bfb6538dd7a4edce22484a1bbc57a8cff6b11d075d40da1afb847ac",
+      "workflow_path": "config/comfyui/text2image_api_workflow.json",
+      "model_files": [],
+      "license_note": ""
+    },
+    {
+      "profile_id": "illustrious-xl-v2",
+      "checkpoint_name": "Illustrious-XL-v2.0.safetensors",
+      "prompt_style": "illustrious",
+      "width": 832,
+      "height": 1216,
+      "steps": 30,
+      "cfg": 7.0,
+      "sampler": "euler_ancestral",
+      "scheduler": "normal",
+      "negative_prompt": "low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature",
+      "clip_skip": null,
+      "experimental": false,
+      "notes": "線と色を重視するイラスト寄りの比較候補。",
+      "source_url": "https://huggingface.co/OnomaAIResearch/Illustrious-XL-v2.0",
+      "license_name": "CreativeML Open RAIL-M",
+      "model_sha256": "c2a1a3eaa13d4c107dc7e00c3fe830cab427aa026362740ea094745b3422a331",
+      "workflow_path": "config/comfyui/text2image_api_workflow.json",
+      "model_files": [],
+      "license_note": ""
+    },
+    {
+      "profile_id": "pony-v6-xl",
+      "checkpoint_name": "ponyDiffusionV6XL_v6StartWithThisOne.safetensors",
+      "prompt_style": "pony",
+      "width": 832,
+      "height": 1216,
+      "steps": 25,
+      "cfg": 7.0,
+      "sampler": "euler_ancestral",
+      "scheduler": "normal",
+      "negative_prompt": "low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature",
+      "clip_skip": -2,
+      "experimental": true,
+      "notes": "獣人・異種族には有力。clip skip 2とライセンス条件を確認する。",
+      "source_url": "https://huggingface.co/LyliaEngine/Pony_Diffusion_V6_XL",
+      "license_name": "Creative Commons Data License Agreement - Permissive 2.0",
+      "model_sha256": "67ab2fd8ec439a89b3fedb15cc65f54336af163c7eb5e4f2acc98f090a29b0b3",
+      "workflow_path": "config/comfyui/text2image_api_workflow.json",
+      "model_files": [],
+      "license_note": ""
+    },
+    {
+      "profile_id": "noobai-xl-1.1",
+      "checkpoint_name": "NoobAI-XL-v1.1.safetensors",
+      "prompt_style": "noobai",
+      "width": 832,
+      "height": 1216,
+      "steps": 28,
+      "cfg": 5.0,
+      "sampler": "euler_ancestral",
+      "scheduler": "normal",
+      "negative_prompt": "low quality, blurry, bad anatomy, bad hands, extra fingers, cropped, duplicate, text, watermark, signature",
+      "clip_skip": null,
+      "experimental": true,
+      "notes": "品質候補。利用条件とComfyUI固有設定を検証してから採用する。",
+      "source_url": "https://huggingface.co/Laxhar/noobai-XL-1.1",
+      "license_name": "Fair AI Public License 1.0-SD",
+      "model_sha256": "6681e8e4b134c81f16533acedb0d406d7e5e366e1624b4105178c64d00b05d51",
+      "workflow_path": "config/comfyui/text2image_api_workflow.json",
+      "model_files": [],
+      "license_note": ""
+    },
+    {
+      "profile_id": "qwen-image-2.1",
+      "checkpoint_name": "qwen_image_2.1_bf16.safetensors",
+      "prompt_style": "natural",
+      "width": 896,
+      "height": 1152,
+      "steps": 25,
+      "cfg": 1.0,
+      "sampler": "euler",
+      "scheduler": "simple",
+      "negative_prompt": "",
+      "clip_skip": null,
+      "experimental": true,
+      "notes": "Qwen-Image 2.1の実験的な比較候補。",
+      "source_url": "",
+      "license_name": "",
+      "model_sha256": "",
+      "workflow_path": "config/comfyui/qwen_image_2_1_t2i_api_workflow.json",
+      "model_files": [
+        {
+          "subdir": "diffusion_models",
+          "filename": "qwen_image_2.1_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_bf16.safetensors",
+          "sha256": "89f4158d066cc33906a199fca85634f766892dd78f49b6698dabf187ac86c4bc",
+          "size": "14.23GB"
+        },
+        {
+          "subdir": "text_encoders",
+          "filename": "qwen3vl_8b_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_bf16.safetensors",
+          "sha256": "68bdc82bc1b66851162ae656225e7e2068166b603db19bd5d5a3b90eb12669a9",
+          "size": "17.53GB"
+        },
+        {
+          "subdir": "vae",
+          "filename": "qwen_image_2.1_vae_bf16.safetensors",
+          "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/vae/qwen_image_2.1_vae_bf16.safetensors",
+          "sha256": "bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9",
+          "size": "0.68GB"
+        }
+      ],
+      "license_note": "Qwen Research License: 研究・評価目的のみ。商用利用は別途契約が必要"
+    }
+  ],
+  "cases": [
+    "human-warrior",
+    "aquatic-designer",
+    "lycanthrope-artist"
+  ],
+  "seeds": [
+    101,
+    202
+  ],
+  "results": [
+    {
+      "profile": "animagine-xl-4.0-opt",
+      "case": "human-warrior",
+      "seed": 101,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, high score, great score, absurdres, A young human swordsman who protects people from information chaos with a calm sense of duty.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 74.0
+      },
+      "status": "success",
+      "elapsed_seconds": 129.96,
+      "minimum_available_percent": 66.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 71.0
+      }
+    },
+    {
+      "profile": "animagine-xl-4.0-opt",
+      "case": "human-warrior",
+      "seed": 202,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, high score, great score, absurdres, A young human swordsman who protects people from information chaos with a calm sense of duty.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 71.0
+      },
+      "status": "success",
+      "elapsed_seconds": 124.951,
+      "minimum_available_percent": 66.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 70.0
+      }
+    },
+    {
+      "profile": "animagine-xl-4.0-opt",
+      "case": "aquatic-designer",
+      "seed": 101,
+      "prompt": "1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, high score, great score, absurdres, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 70.0
+      },
+      "status": "success",
+      "elapsed_seconds": 123.705,
+      "minimum_available_percent": 66.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 72.0
+      }
+    },
+    {
+      "profile": "animagine-xl-4.0-opt",
+      "case": "aquatic-designer",
+      "seed": 202,
+      "prompt": "1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, high score, great score, absurdres, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 72.0
+      },
+      "status": "success",
+      "elapsed_seconds": 141.872,
+      "minimum_available_percent": 66.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 73.0
+      }
+    },
+    {
+      "profile": "animagine-xl-4.0-opt",
+      "case": "lycanthrope-artist",
+      "seed": 101,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, high score, great score, absurdres, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 73.0
+      },
+      "status": "success",
+      "elapsed_seconds": 149.639,
+      "minimum_available_percent": 56.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 60.0
+      }
+    },
+    {
+      "profile": "animagine-xl-4.0-opt",
+      "case": "lycanthrope-artist",
+      "seed": 202,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, high score, great score, absurdres, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 60.0
+      },
+      "status": "success",
+      "elapsed_seconds": 130.866,
+      "minimum_available_percent": 56.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 64.0
+      }
+    },
+    {
+      "profile": "illustrious-xl-v2",
+      "case": "human-warrior",
+      "seed": 101,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, high score, great score, absurdres, A young human swordsman who protects people from information chaos with a calm sense of duty.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 64.0
+      },
+      "status": "success",
+      "elapsed_seconds": 145.935,
+      "minimum_available_percent": 56.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 62.0
+      }
+    },
+    {
+      "profile": "illustrious-xl-v2",
+      "case": "human-warrior",
+      "seed": 202,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, high score, great score, absurdres, A young human swordsman who protects people from information chaos with a calm sense of duty.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 62.0
+      },
+      "status": "success",
+      "elapsed_seconds": 135.5,
+      "minimum_available_percent": 55.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 70.0
+      }
+    },
+    {
+      "profile": "illustrious-xl-v2",
+      "case": "aquatic-designer",
+      "seed": 101,
+      "prompt": "1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, high score, great score, absurdres, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 70.0
+      },
+      "status": "success",
+      "elapsed_seconds": 129.647,
+      "minimum_available_percent": 64.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 72.0
+      }
+    },
+    {
+      "profile": "illustrious-xl-v2",
+      "case": "aquatic-designer",
+      "seed": 202,
+      "prompt": "1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, high score, great score, absurdres, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 72.0
+      },
+      "status": "success",
+      "elapsed_seconds": 137.861,
+      "minimum_available_percent": 64.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 71.0
+      }
+    },
+    {
+      "profile": "illustrious-xl-v2",
+      "case": "lycanthrope-artist",
+      "seed": 101,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, high score, great score, absurdres, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 71.0
+      },
+      "status": "success",
+      "elapsed_seconds": 122.288,
+      "minimum_available_percent": 67.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 75.0
+      }
+    },
+    {
+      "profile": "illustrious-xl-v2",
+      "case": "lycanthrope-artist",
+      "seed": 202,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, high score, great score, absurdres, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 75.0
+      },
+      "status": "success",
+      "elapsed_seconds": 107.967,
+      "minimum_available_percent": 68.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 76.0
+      }
+    },
+    {
+      "profile": "pony-v6-xl",
+      "case": "human-warrior",
+      "seed": 101,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, source_anime, score_9, score_8_up, score_7_up, A young human swordsman who protects people from information chaos with a calm sense of duty.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 76.0
+      },
+      "status": "success",
+      "elapsed_seconds": 100.44,
+      "minimum_available_percent": 69.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 74.0
+      }
+    },
+    {
+      "profile": "pony-v6-xl",
+      "case": "human-warrior",
+      "seed": 202,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, source_anime, score_9, score_8_up, score_7_up, A young human swordsman who protects people from information chaos with a calm sense of duty.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 74.0
+      },
+      "status": "success",
+      "elapsed_seconds": 94.263,
+      "minimum_available_percent": 68.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 81.0
+      }
+    },
+    {
+      "profile": "pony-v6-xl",
+      "case": "aquatic-designer",
+      "seed": 101,
+      "prompt": "1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, source_anime, score_9, score_8_up, score_7_up, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      },
+      "status": "success",
+      "elapsed_seconds": 103.513,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 81.0
+      }
+    },
+    {
+      "profile": "pony-v6-xl",
+      "case": "aquatic-designer",
+      "seed": 202,
+      "prompt": "1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, source_anime, score_9, score_8_up, score_7_up, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 81.0
+      },
+      "status": "success",
+      "elapsed_seconds": 107.908,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      }
+    },
+    {
+      "profile": "pony-v6-xl",
+      "case": "lycanthrope-artist",
+      "seed": 101,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, source_anime, score_9, score_8_up, score_7_up, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      },
+      "status": "success",
+      "elapsed_seconds": 94.198,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      }
+    },
+    {
+      "profile": "pony-v6-xl",
+      "case": "lycanthrope-artist",
+      "seed": 202,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, source_anime, score_9, score_8_up, score_7_up, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      },
+      "status": "success",
+      "elapsed_seconds": 94.99,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      }
+    },
+    {
+      "profile": "noobai-xl-1.1",
+      "case": "human-warrior",
+      "seed": 101,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, best quality, highly detailed, A young human swordsman who protects people from information chaos with a calm sense of duty.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      },
+      "status": "success",
+      "elapsed_seconds": 108.445,
+      "minimum_available_percent": 76.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 82.0
+      }
+    },
+    {
+      "profile": "noobai-xl-1.1",
+      "case": "human-warrior",
+      "seed": 202,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, young adult, human, Swordsman, disciplined guardian, Can cut through digital noise with a single stroke, masterpiece, best quality, highly detailed, A young human swordsman who protects people from information chaos with a calm sense of duty.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 82.0
+      },
+      "status": "success",
+      "elapsed_seconds": 103.25,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      }
+    },
+    {
+      "profile": "noobai-xl-1.1",
+      "case": "aquatic-designer",
+      "seed": 101,
+      "prompt": "1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, best quality, highly detailed, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      },
+      "status": "success",
+      "elapsed_seconds": 103.666,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 82.0
+      }
+    },
+    {
+      "profile": "noobai-xl-1.1",
+      "case": "aquatic-designer",
+      "seed": 202,
+      "prompt": "1girl, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, adult, half-human half-aquatic woman, Nostalgic Experience Designer, Can reverse causality through rhythmic movement, masterpiece, best quality, highly detailed, An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 82.0
+      },
+      "status": "success",
+      "elapsed_seconds": 99.662,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 81.0
+      }
+    },
+    {
+      "profile": "noobai-xl-1.1",
+      "case": "lycanthrope-artist",
+      "seed": 101,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, best quality, highly detailed, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 81.0
+      },
+      "status": "success",
+      "elapsed_seconds": 116.232,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      }
+    },
+    {
+      "profile": "noobai-xl-1.1",
+      "case": "lycanthrope-artist",
+      "seed": 202,
+      "prompt": "1boy, solo, full body, standing, looking at viewer, feet visible, centered composition, white background, middle-aged, lycanthrope, Biotechnology Tattoo Artist, Can absorb emotions as colors and animate tattoos, masterpiece, best quality, highly detailed, A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 82.0
+      },
+      "status": "success",
+      "elapsed_seconds": 100.768,
+      "minimum_available_percent": 75.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 81.0
+      }
+    },
+    {
+      "profile": "qwen-image-2.1",
+      "case": "human-warrior",
+      "seed": 101,
+      "prompt": "A young adult male human character whose role is Swordsman, disciplined guardian and whose ability is Can cut through digital noise with a single stroke. The character is based on the concept: A young human swordsman who protects people from information chaos with a calm sense of duty.. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 83.0
+      },
+      "status": "success_after_timeout",
+      "error_type": "ComfyUITimeoutError",
+      "message": "ComfyUI timed out after 300s for prompt 5cd0fc9b-632c-41d3-9202-b82b397d7148",
+      "elapsed_seconds": 300.202,
+      "minimum_available_percent": 69.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 73.0
+      },
+      "comfyui_elapsed_seconds": 502.8
+    },
+    {
+      "profile": "qwen-image-2.1",
+      "case": "human-warrior",
+      "seed": 202,
+      "prompt": "A young adult male human character whose role is Swordsman, disciplined guardian and whose ability is Can cut through digital noise with a single stroke. The character is based on the concept: A young human swordsman who protects people from information chaos with a calm sense of duty.. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 73.0
+      },
+      "status": "success_after_timeout",
+      "error_type": "ComfyUITimeoutError",
+      "message": "ComfyUI timed out after 300s for prompt f506c85e-0eea-44e6-92ee-f4b37b14a3e3",
+      "elapsed_seconds": 300.882,
+      "minimum_available_percent": 69.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 75.0
+      },
+      "comfyui_elapsed_seconds": 498.8
+    },
+    {
+      "profile": "qwen-image-2.1",
+      "case": "aquatic-designer",
+      "seed": 101,
+      "prompt": "An adult female half-human half-aquatic woman character whose role is Nostalgic Experience Designer and whose ability is Can reverse causality through rhythmic movement. The character is based on the concept: An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 75.0
+      },
+      "status": "success_after_timeout",
+      "error_type": "ComfyUITimeoutError",
+      "message": "ComfyUI timed out after 300s for prompt 508b17b7-0c31-47ee-a4f4-8fc1c9ac09be",
+      "elapsed_seconds": 300.898,
+      "minimum_available_percent": 69.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 73.0
+      },
+      "comfyui_elapsed_seconds": 547.3
+    },
+    {
+      "profile": "qwen-image-2.1",
+      "case": "aquatic-designer",
+      "seed": 202,
+      "prompt": "An adult female half-human half-aquatic woman character whose role is Nostalgic Experience Designer and whose ability is Can reverse causality through rhythmic movement. The character is based on the concept: An elegant aquatic dancer who designs shared memories and dreams of a cooperative utopia.. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 73.0
+      },
+      "status": "success_after_timeout",
+      "error_type": "ComfyUITimeoutError",
+      "message": "ComfyUI timed out after 300s for prompt df8f3761-18be-4277-b274-3e211ad07cb5",
+      "elapsed_seconds": 300.25,
+      "minimum_available_percent": 69.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 75.0
+      },
+      "comfyui_elapsed_seconds": 519.8
+    },
+    {
+      "profile": "qwen-image-2.1",
+      "case": "lycanthrope-artist",
+      "seed": 101,
+      "prompt": "A middle-aged male lycanthrope character whose role is Biotechnology Tattoo Artist and whose ability is Can absorb emotions as colors and animate tattoos. The character is based on the concept: A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 75.0
+      },
+      "status": "success_after_timeout",
+      "error_type": "ComfyUITimeoutError",
+      "message": "ComfyUI timed out after 300s for prompt cc37d1f4-486f-459a-bda3-cd1ccf06e418",
+      "elapsed_seconds": 300.138,
+      "minimum_available_percent": 69.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 76.0
+      },
+      "comfyui_elapsed_seconds": 602.9
+    },
+    {
+      "profile": "qwen-image-2.1",
+      "case": "lycanthrope-artist",
+      "seed": 202,
+      "prompt": "A middle-aged male lycanthrope character whose role is Biotechnology Tattoo Artist and whose ability is Can absorb emotions as colors and animate tattoos. The character is based on the concept: A middle-aged lycanthrope artist whose living tattoos connect people through visible emotions.. Full body, single character, plain white background, anime illustration style, no text or watermark.",
+      "memory_before": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 76.0
+      },
+      "status": "success_after_timeout",
+      "error_type": "ComfyUITimeoutError",
+      "message": "ComfyUI timed out after 300s for prompt 543e7073-f6c7-4af9-b623-f2efb683183a",
+      "elapsed_seconds": 300.091,
+      "minimum_available_percent": 69.0,
+      "memory_after": {
+        "platform": "Darwin",
+        "total_bytes": 137438953472,
+        "available_percent": 76.0
+      },
+      "comfyui_elapsed_seconds": 511.7
+    }
+  ],
+  "summary": {
+    "success": 24,
+    "errors": 6,
+    "connection_errors": 0
+  }
+}
