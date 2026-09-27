@@ -150,6 +150,8 @@ python3 setup_local.py --dry-run
 python3 setup_local.py --comfyui-dir /path/to/ComfyUI
 ```
 
+ComfyUIは動作を確認したリリース（現在は `v0.37.4`）に固定して導入します。別のリリースを試す場合は `COMFYUI_REF=v0.x.y` を指定してください。既存のComfyUIが固定リリースと異なる場合は、切り替え方を警告で表示します。
+
 `--comfyui-dir` に既定の `.runtime/ComfyUI` 以外を指定すると、ComfyUI用の仮想環境もその親ディレクトリの `comfyui-venv` に作成されます。仮想環境の場所は `COMFYUI_VENV` または `--comfyui-venv` で明示指定できます。
 
 ```bash

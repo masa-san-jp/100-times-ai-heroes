@@ -35,6 +35,8 @@ RUNTIME_DIR = PROJECT_ROOT / ".runtime"
 PROJECT_VENV = PROJECT_ROOT / ".venv"
 DEFAULT_COMFYUI_DIR = PROJECT_ROOT / DEFAULT_COMFYUI_DIR_RELATIVE
 COMFYUI_REPOSITORY = "https://github.com/Comfy-Org/ComfyUI.git"
+# Pinned release verified with this project; master has broken SDXL workflows before.
+COMFYUI_REF = os.getenv("COMFYUI_REF", "v0.37.4")
 DEFAULT_LLM_MODEL = "gpt-oss:20b"
 DEFAULT_IMAGE_PROFILE = "animagine-xl-4.0-opt"
 MINIMUM_MODEL_FREE_BYTES = 12 * 1024**3
@@ -206,9 +208,27 @@ def _git_is_repository(path: Path) -> bool:
     return (path / ".git").exists()
 
 
+def _git_describe(path: Path) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(path), "describe", "--tags", "--exact-match"],
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip() if result.returncode == 0 else ""
+
+
 def _ensure_comfyui_checkout(path: Path, *, dry_run: bool) -> None:
     if path.exists() and (path / "main.py").exists():
         print(f"OK: ComfyUI installation exists: {path}")
+        if _git_is_repository(path):
+            current = _git_describe(path)
+            if current != COMFYUI_REF:
+                print(
+                    f"WARNING: ComfyUI is at {current or 'an untagged commit'}, "
+                    f"but this project is verified with {COMFYUI_REF}.\n"
+                    f"  To switch: git -C {path} fetch --depth 1 origin tag {COMFYUI_REF} "
+                    f"&& git -C {path} checkout {COMFYUI_REF}"
+                )
         return
     if path.exists() and not _git_is_repository(path):
         if any(path.iterdir()):
@@ -221,7 +241,10 @@ def _ensure_comfyui_checkout(path: Path, *, dry_run: bool) -> None:
         return
     if not dry_run:
         _ensure_directory(path.parent)
-    _run(["git", "clone", "--depth", "1", COMFYUI_REPOSITORY, path], dry_run=dry_run)
+    _run(
+        ["git", "clone", "--depth", "1", "--branch", COMFYUI_REF, COMFYUI_REPOSITORY, path],
+        dry_run=dry_run,
+    )
 
 
 def _ensure_comfyui_dependencies(
