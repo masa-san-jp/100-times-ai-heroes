@@ -153,11 +153,10 @@ class Config:
         selected_model = openai_model if provider == "openai" else ollama_model
 
         model_profile_id = os.getenv(
-            "COMFYUI_MODEL_PROFILE", "animagine-xl-4.0-opt"
+            "COMFYUI_MODEL_PROFILE", "qwen-image-2.1"
         ).strip()
-        model_profiles_path = os.getenv(
-            "COMFYUI_MODEL_PROFILES_PATH",
-            "./config/comfyui/model_profiles.json",
+        model_profiles_path = os.getenv("COMFYUI_MODEL_PROFILES_PATH") or str(
+            Path(__file__).resolve().parent / "config/comfyui/model_profiles.json"
         )
         image_profile = get_image_model_profile(
             model_profile_id, Path(model_profiles_path)
@@ -183,7 +182,7 @@ class Config:
             comfyui_workflow_path=os.getenv("COMFYUI_WORKFLOW_PATH")
             or image_profile.workflow_path,
             comfyui_checkpoint_name=checkpoint_name,
-            comfyui_timeout_seconds=_env_float("COMFYUI_TIMEOUT_SECONDS", 300.0),
+            comfyui_timeout_seconds=_env_float("COMFYUI_TIMEOUT_SECONDS", image_profile.timeout_seconds),
             comfyui_poll_interval_seconds=_env_float(
                 "COMFYUI_POLL_INTERVAL_SECONDS", 1.0
             ),

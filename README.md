@@ -10,7 +10,7 @@
 
 ### まず動かす
 
-初回だけインターネット接続が必要です。Ollamaモデル、ComfyUI、選択した画像モデルを導入するため、空きディスク30GB以上を推奨します。
+初回だけインターネット接続が必要です。Ollamaモデル、ComfyUI、選択した画像モデルを導入するため、空きディスク60GB以上を推奨します（既定の画像モデル Qwen-Image 2.1 が約32GB、LLM の gpt-oss:20b が約13GB）。
 
 ```bash
 git clone https://github.com/masa-san-jp/100-times-ai-heroes.git
@@ -107,7 +107,8 @@ Finalist entry for the 3rd AI Art Grand Prix
 
 ```bash
 # 初回だけ。Ollama、プロジェクト用Python環境、ComfyUI、
-# デフォルト画像モデル（約7GB）を導入する
+# デフォルト画像モデル Qwen-Image 2.1（約32GB）を導入する
+# 導入前にライセンス（研究・評価目的のみ）の確認を求めます
 python3 setup_local.py
 
 # 以降は、サービスを自動起動して1キャラクター生成
@@ -158,10 +159,11 @@ ComfyUIは動作を確認したリリース（現在は `v0.37.4`）に固定し
 python3 setup_local.py --comfyui-dir /path/to/ComfyUI --comfyui-venv /path/to/comfyui-venv
 ```
 
-使用する画像モデルを変更する場合は、profileを1つだけ指定します。候補を全て自動取得することはありません。
+使用する画像モデルを変更する場合は、profileを1つだけ指定します。候補を全て自動取得することはありません。既定の Qwen-Image 2.1 は1枚に約9分かかります（M4 Max）。速さを優先する場合や、商用利用する場合は Animagine XL 4.0（1枚約2分、約7GB）を使ってください。
 
 ```bash
-python3 setup_local.py --profile illustrious-xl-v2
+python3 setup_local.py --profile animagine-xl-4.0-opt
+# .env の COMFYUI_MODEL_PROFILE も animagine-xl-4.0-opt に書き換わる
 ```
 
 セットアップ後は、`run_local.py`（macOS/Linuxでは`run_local.sh`）が必要なOllamaとComfyUIをlocalhost限定で起動します。ログは `.runtime/ollama.log` と `.runtime/comfyui.log` に保存されます。
@@ -284,13 +286,13 @@ python3 run_local.py --iterations 1 --generate-images
 
 | Profile | 用途 | Checkpoint |
 |---|---|---|
-| `animagine-xl-4.0-opt` | アニメ・JRPG系の第一候補 | `animagine-xl-4.0-opt.safetensors` |
+| `qwen-image-2.1`（既定） | 画質と設定の反映が最もよい。研究・評価目的のみ。1枚約9分 | diffusion model / text encoder / VAE（約32GB） |
+| `animagine-xl-4.0-opt` | 高速な代替（1枚約2分）。商用利用可 | `animagine-xl-4.0-opt.safetensors` |
 | `illustrious-xl-v2` | 線・色を重視するイラスト | `Illustrious-XL-v2.0.safetensors` |
 | `pony-v6-xl` | 獣人・異種族 | `ponyDiffusionV6XL_v6StartWithThisOne.safetensors` |
 | `noobai-xl-1.1` | 実験的な品質候補 | `NoobAI-XL-v1.1.safetensors` |
-| `qwen-image-2.1` | 実験的な比較候補（研究・評価目的のみ） | diffusion model / text encoder / VAE（約32GB） |
 
-Qwen-Image 2.1は実験的な候補です。[Qwen Research License Agreement](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE)により、利用目的は研究・評価に限られ、商用利用には別途契約が必要です（詳細は下の「License and model terms」）。3つのモデルファイルを合わせて、およそ32GBのダウンロードが必要です。
+既定の画像モデルは Qwen-Image 2.1 です。[Qwen Research License Agreement](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE)により、利用目的は研究・評価に限られ、商用利用には別途契約が必要です（詳細は下の「License and model terms」）。3つのモデルファイルを合わせて、およそ32GBのダウンロードが必要です。
 
 2026-09-27に5モデルを比較した記録（指示文、プロンプト、画像、資料画像）は [examples/model-comparison/](examples/model-comparison/README.md) にあります。
 
@@ -364,7 +366,7 @@ Qwen-Image 2.1（profile `qwen-image-2.1`）は、[Qwen Research License Agreeme
 - 第3条 c: モデルを再配布する場合は、所定の著作権表示を含む Notice ファイルを添付する
 - 第4条 b: モデルや生成物を使って AI モデルを作り公開する場合は、「Built with Qwen」または「Improved using Qwen」と表示する
 
-生成した画像の使い道を直接制限する条項はありません。ただし、モデルを使う目的そのものが研究・評価に限られます。このリポジトリでは Qwen-Image 2.1 を比較評価のための実験候補としてのみ扱い、既定モデルにはしていません。`examples/model-comparison/` にある Qwen-Image 2.1 の画像は、この比較評価で生成したものです。
+生成した画像の使い道を直接制限する条項はありません。ただし、モデルを使う目的そのものが研究・評価に限られます。このリポジトリは生成物を販売せず、生成 AI による創作の探求としてキャラクターのアイデアを出す用途で Qwen-Image 2.1 を既定モデルにしています（作者の判断）。生成物を商用に使う場合や、用途が研究・評価に当たらない場合は、Animagine XL 4.0 など商用利用可能なモデルに切り替えるか、Qwen の商用ライセンスを取得してください。`examples/model-comparison/` にある Qwen-Image 2.1 の画像は、この比較評価で生成したものです。
 
 この節は原文の要約で、法的な助言ではありません。利用前に必ず原文を確認してください。
 

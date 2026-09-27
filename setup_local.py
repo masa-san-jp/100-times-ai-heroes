@@ -38,7 +38,7 @@ COMFYUI_REPOSITORY = "https://github.com/Comfy-Org/ComfyUI.git"
 # Pinned release verified with this project; master has broken SDXL workflows before.
 COMFYUI_REF = os.getenv("COMFYUI_REF", "v0.37.4")
 DEFAULT_LLM_MODEL = "gpt-oss:20b"
-DEFAULT_IMAGE_PROFILE = "animagine-xl-4.0-opt"
+DEFAULT_IMAGE_PROFILE = "qwen-image-2.1"
 MINIMUM_MODEL_FREE_BYTES = 12 * 1024**3
 
 
@@ -425,13 +425,13 @@ def _download_model_files(
     assume_yes: bool,
     dry_run: bool,
 ) -> None:
-    if profile.experimental and profile.license_note:
+    if profile.license_note:
         print(f"LICENSE NOTE ({profile.profile_id}): {profile.license_note}")
         if not _confirm(
-            "この実験的profileのライセンス注意事項を確認し、続行しますか?",
+            "このprofileのライセンス注意事項を確認し、続行しますか?",
             assume_yes=assume_yes or dry_run,
         ):
-            raise SetupError("実験的profileの導入を中止しました。")
+            raise SetupError("profileの導入を中止しました。")
 
     for model_file in profile.model_files:
         destination = comfyui_dir / "models" / model_file.subdir / model_file.filename
@@ -442,7 +442,7 @@ def _download_model_files(
             destination,
             size=model_file.size,
             # The license confirmation above authorizes all files in this profile.
-            assume_yes=assume_yes or bool(profile.experimental and profile.license_note),
+            assume_yes=assume_yes or bool(profile.license_note),
             dry_run=dry_run,
         )
 
