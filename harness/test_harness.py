@@ -100,6 +100,9 @@ class FakeImageGenerator:
 
 def test_config_defaults_and_env(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(app, "load_dotenv", lambda: None)
+    for name in ("COMFYUI_MODEL_PROFILE", "COMFYUI_MODEL_PROFILES_PATH", "COMFYUI_WORKFLOW_PATH"):
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("OLLAMA_MODEL", "env-model")
     monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:9999")
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
@@ -791,6 +794,20 @@ def test_custom_workflow_is_still_validated_as_sdxl(tmp_path):
 
     with pytest.raises(ComfyUIConfigurationError):
         generator._build_workflow("prompt", 1)
+
+
+def test_sdxl_without_clip_skip_bypasses_clip_set_last_layer():
+    # CLIPSetLastLayer(-1) is no longer a no-op in current ComfyUI and breaks SDXL prompts.
+    generator = ComfyUIImageGenerator(
+        base_url="http://127.0.0.1:8188",
+        workflow_path=PROJECT_ROOT / "config/comfyui/text2image_api_workflow.json",
+        checkpoint_name="model.safetensors",
+    )
+
+    workflow = generator._build_workflow("prompt", 1)
+
+    assert workflow["6"]["inputs"]["clip"] == ["4", 1]
+    assert workflow["7"]["inputs"]["clip"] == ["4", 1]
 
 
 def test_clip_skip_without_clip_node_raises(tmp_path):
