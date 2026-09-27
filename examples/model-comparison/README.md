@@ -1,5 +1,9 @@
 # モデル比較（2026-09-27）
 
+![比較の資料画像](comparison_sheet.png)
+
+Qwen-Image 2.1 の画像は、[Qwen Research License Agreement](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE)（利用目的は研究・評価に限る）のもとで、比較評価のために生成したものです。各モデルのライセンスは [docs/MODEL_LICENSES.md](../../docs/MODEL_LICENSES.md) を参照してください。
+
 ## 人間の戦士（`human-warrior`）
 
 ### 指示文

@@ -288,7 +288,9 @@ python3 run_local.py --iterations 1 --generate-images
 | `noobai-xl-1.1` | 実験的な品質候補 | `NoobAI-XL-v1.1.safetensors` |
 | `qwen-image-2.1` | 実験的な比較候補（研究・評価目的のみ） | diffusion model / text encoder / VAE（約32GB） |
 
-Qwen-Image 2.1は実験的な候補です。Qwen Research Licenseにより研究・評価目的のみの利用で、商用利用には別途契約が必要です。3つのモデルファイルを合わせて、およそ32GBのダウンロードが必要です。
+Qwen-Image 2.1は実験的な候補です。[Qwen Research License Agreement](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE)により、利用目的は研究・評価に限られ、商用利用には別途契約が必要です（詳細は下の「License and model terms」）。3つのモデルファイルを合わせて、およそ32GBのダウンロードが必要です。
+
+2026-09-27に5モデルを比較した記録（指示文、プロンプト、画像、資料画像）は [examples/model-comparison/](examples/model-comparison/README.md) にあります。
 
 モデルを1つに決める前に、同一の固定seedで候補を比較できます。既定では3ケース×2seed×5モデルを実行します。
 
@@ -349,6 +351,20 @@ bash tools/ci.sh
 READMEに掲載している作品画像と動画、コンセプトの文章、および `examples/` に置く生成画像はMIT Licenseの対象外です。これらの権利は作者に帰属します。利用したい場合は作者に確認してください。
 
 画像モデルはリポジトリに含めず、セットアップ時に選択したモデルの取得元からダウンロードします。モデルごとにライセンスと利用制限が異なります。原典へのリンクと要点は [docs/MODEL_LICENSES.md](docs/MODEL_LICENSES.md) にまとめています。導入時にも、選んだモデルのライセンス名と原典の URL を表示します。
+
+#### Qwen-Image 2.1 のライセンス
+
+Qwen-Image 2.1（profile `qwen-image-2.1`）は、[Qwen Research License Agreement（2026-09-20）](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE)で提供されています。Apache 2.0 などの一般的なオープンソースライセンスではありません。原文の主な条項は次のとおりです。
+
+- 第1条 i: 「Non-Commercial」は「研究または評価の目的に限る」と定義される
+- 第2条 a: 使用、複製、改変などは非商用目的に限って許諾される
+- 第2条 b: 商用目的で使う場合は、別途商用ライセンスが必要（model-business@notice.qwencloud.com）
+- 第3条 c: モデルを再配布する場合は、所定の著作権表示を含む Notice ファイルを添付する
+- 第4条 b: モデルや生成物を使って AI モデルを作り公開する場合は、「Built with Qwen」または「Improved using Qwen」と表示する
+
+生成した画像の使い道を直接制限する条項はありません。ただし、モデルを使う目的そのものが研究・評価に限られます。このリポジトリでは Qwen-Image 2.1 を比較評価のための実験候補としてのみ扱い、既定モデルにはしていません。`examples/model-comparison/` にある Qwen-Image 2.1 の画像は、この比較評価で生成したものです。
+
+この節は原文の要約で、法的な助言ではありません。利用前に必ず原文を確認してください。
 
 ---
 
