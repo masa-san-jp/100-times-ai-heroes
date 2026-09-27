@@ -26,7 +26,8 @@
       "notes": "アニメ・JRPG系の第一比較候補。",
       "source_url": "https://huggingface.co/cagliostrolab/animagine-xl-4.0",
       "license_name": "CreativeML Open RAIL++-M",
-      "model_sha256": "6327eca98bfb6538dd7a4edce22484a1bbc57a8cff6b11d075d40da1afb847ac"
+      "model_sha256": "6327eca98bfb6538dd7a4edce22484a1bbc57a8cff6b11d075d40da1afb847ac",
+      "license_url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/blob/main/LICENSE.md"
     },
     "illustrious-xl-v2": {
       "checkpoint_name": "Illustrious-XL-v2.0.safetensors",
@@ -41,7 +42,8 @@
       "notes": "線と色を重視するイラスト寄りの比較候補。",
       "source_url": "https://huggingface.co/OnomaAIResearch/Illustrious-XL-v2.0",
       "license_name": "CreativeML Open RAIL-M",
-      "model_sha256": "c2a1a3eaa13d4c107dc7e00c3fe830cab427aa026362740ea094745b3422a331"
+      "model_sha256": "c2a1a3eaa13d4c107dc7e00c3fe830cab427aa026362740ea094745b3422a331",
+      "license_url": "https://huggingface.co/spaces/CompVis/stable-diffusion-license"
     },
     "pony-v6-xl": {
       "checkpoint_name": "ponyDiffusionV6XL_v6StartWithThisOne.safetensors",
@@ -57,8 +59,10 @@
       "experimental": true,
       "notes": "獣人・異種族には有力。clip skip 2とライセンス条件を確認する。",
       "source_url": "https://huggingface.co/LyliaEngine/Pony_Diffusion_V6_XL",
-      "license_name": "Creative Commons Data License Agreement - Permissive 2.0",
-      "model_sha256": "67ab2fd8ec439a89b3fedb15cc65f54336af163c7eb5e4f2acc98f090a29b0b3"
+      "license_name": "Modified Fair AI Public License 1.0-SD",
+      "model_sha256": "67ab2fd8ec439a89b3fedb15cc65f54336af163c7eb5e4f2acc98f090a29b0b3",
+      "license_url": "https://civitai.com/models/257749",
+      "official_source_url": "https://civitai.com/models/257749"
     },
     "noobai-xl-1.1": {
       "checkpoint_name": "NoobAI-XL-v1.1.safetensors",
@@ -74,7 +78,8 @@
       "notes": "品質候補。利用条件とComfyUI固有設定を検証してから採用する。",
       "source_url": "https://huggingface.co/Laxhar/noobai-XL-1.1",
       "license_name": "Fair AI Public License 1.0-SD",
-      "model_sha256": "6681e8e4b134c81f16533acedb0d406d7e5e366e1624b4105178c64d00b05d51"
+      "model_sha256": "6681e8e4b134c81f16533acedb0d406d7e5e366e1624b4105178c64d00b05d51",
+      "license_url": "https://freedevproject.org/faipl-1.0-sd/"
     },
     "qwen-image-2.1": {
       "checkpoint_name": "qwen_image_2.1_bf16.safetensors",
@@ -89,7 +94,7 @@
       "timeout_seconds": 1500,
       "experimental": true,
       "notes": "Qwen-Image 2.1の実験的な比較候補。",
-      "license_note": "Qwen Research License: 研究・評価目的のみ。商用利用は別途契約が必要",
+      "license_note": "Qwen Research License: 利用目的は研究・評価に限られる（第1条i・第2条a）。商用利用は別途契約が必要",
       "workflow_path": "config/comfyui/qwen_image_2_1_t2i_api_workflow.json",
       "model_files": [
         {
@@ -113,7 +118,10 @@
           "sha256": "bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9",
           "size": "0.68GB"
         }
-      ]
+      ],
+      "license_name": "Qwen Research License Agreement (2026-09-20)",
+      "license_url": "https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE",
+      "source_url": "https://huggingface.co/Qwen/Qwen-Image-2.1"
     }
   }
 }

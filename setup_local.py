@@ -388,6 +388,13 @@ def _download_model(profile, destination: Path, *, assume_yes: bool, dry_run: bo
     )
 
 
+def _print_license(profile) -> None:
+    name = getattr(profile, "license_name", "") or "不明（モデルカードを確認）"
+    url = getattr(profile, "license_url", "")
+    print(f"LICENSE ({profile.profile_id}): {name}" + (f" <{url}>" if url else ""))
+    print("  詳細: docs/MODEL_LICENSES.md")
+
+
 def _download_model_files(
     profile,
     comfyui_dir: Path,
@@ -524,6 +531,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 venv_dir=comfyui_venv,
                 dry_run=args.dry_run,
             )
+            _print_license(profile)
             if profile.model_files:
                 _download_model_files(
                     profile,
