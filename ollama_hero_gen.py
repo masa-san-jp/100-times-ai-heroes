@@ -388,6 +388,9 @@ def create_text_generator(config: Config) -> TextGenerator:
 # =============================================================================
 
 
+PROJECT_SEEDS_DIR = Path(__file__).resolve().parent / "config" / "seeds"
+
+
 class LocalStorage:
     """ローカルCSVストレージ。Google Sheetsは使用しない。"""
 
@@ -504,6 +507,11 @@ class LocalStorage:
         for key, seed_file in self.seed_files.items():
             if seed_file.exists():
                 continue
+            bundled = PROJECT_SEEDS_DIR / f"seed_{key}.csv"
+            if bundled.exists():
+                seed_file.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(bundled, seed_file)
+                continue
             with open(seed_file, "w", newline="", encoding="utf-8") as file:
                 writer = csv.writer(file)
                 writer.writerow([self.SEED_HEADERS[key]])
@@ -577,7 +585,7 @@ class LocalStorage:
     def append_seed(self, attr_type: str, value: str) -> None:
         if attr_type not in self.seed_files:
             raise SeedDataError(f"Unknown seed attribute: {attr_type}")
-        normalized = value.strip()
+        normalized = " ".join(value.replace("**", "").split()).strip(" \"'")
         if not normalized:
             raise SeedDataError(
                 f"Cannot append an empty value to seed_{attr_type}.csv"
@@ -771,7 +779,7 @@ class Prompts:
 
     @staticmethod
     def character_concept(physical: str, role: str, ability: str, wants: str) -> str:
-        return f"""以下のキャラクター属性を、重要な要素を損なわないように要約し、英文1段落で出力してください。
+        return f"""以下のキャラクター属性を1人の人物として統合し、英文1段落で描写してください。
 
 ## 属性
 - 身体的特徴: {physical}
@@ -781,7 +789,10 @@ class Prompts:
 
 ## ルール
 - 英語で出力
-- 1段落のみ
+- 1段落のみ（3〜4文）
+- 属性に含まれる固有の言葉や具体的な描写は省略せずに残す
+- 属性にない出来事・場所・過去・人間関係・心情は加えない
+- "hero", "destiny", "darkness", "protect the innocent" のような決まり文句を使わない
 - 説明や補足は不要
 
 ## 出力"""
@@ -807,7 +818,7 @@ Yuichi Aihara
 
     @staticmethod
     def profile(concept: str) -> str:
-        return f"""以下のキャラクター設定を日本語で説明してください。
+        return f"""以下のキャラクター設定をもとに、この人物のプロフィールを日本語で書いてください。
 
 ## キャラクター設定
 {concept}
@@ -815,10 +826,15 @@ Yuichi Aihara
 ## ルール
 - 日本語で出力
 - 性別不明・Theyの場合は「彼は」を使用
-- 1段落のみ
+- 1段落のみ（3〜4文）
+- 書くのは人物像だけ: 年齢・性別・種族、役割、能力、願望
+- 役割・能力・願望は、設定に含まれる固有の言葉や条件を省略せず、具体的に書く
+- 設定にない出来事・場所・過去・人間関係・今していること・考えていること・心情は書かない
+- 「運命」「闇」「守るべきもの」「強い意志」のような決まり文句を使わない
+- 英語をそのまま残さず、自然な日本語にする（役割名などの固有の名称はカタカナ表記にしてよい）
 
 ## 出力例
-彼はプリティーンのノンバイナリー半人半神で、デジタル栄養コンサルタントとして活動しています。
+彼はプリティーンのノンバイナリー半人半神で、役割はデジタル栄養コンサルタント。人の頭に詰め込まれた情報を献立のように仕分け、一日に摂ってよい量を処方する。能力は、写真の中に入り込み、雨の日に撮られた写真に限って細部を書き換えられること。願望は、祖母が最後に残したレシピを、この冬に港が閉ざされる前に祖母の初恋の相手へ届けることだ。
 
 ## 出力"""
 
@@ -851,9 +867,13 @@ Yuichi Aihara
 - 英語で出力
 - 能力名と説明を1文で
 - 1つのみ
+- 元キャラクターと同じ能力や、よくある超能力（火・透明化・怪力・読心・治癒など）は避け、意外な能力にする
+- 条件や制約は1つまで。30語以内
+- 元キャラクターの名前・役割・持ち物を参照せず、単独で意味が通る文にする
+- 記号や装飾（** など）、改行を使わない
 
 ## 出力例
-Has the ability to materialize memories: Can share past events with others.
+Can walk into photographs and change small details, but only in pictures taken on rainy days.
 
 ## 出力"""
 
@@ -868,9 +888,13 @@ Has the ability to materialize memories: Can share past events with others.
 - 英語で出力
 - "I want to..." の形式
 - 1文のみ
+- 「守りたい」「平和」「最強になりたい」「真実の愛」のような漠然とした願望は避け、具体的な相手・場所・物のどれか1つを含める
+- 日付・年・実在の地名は入れない。25語以内
+- 元キャラクターの名前・役割・持ち物を参照せず、単独で意味が通る文にする
+- 記号や装飾（** など）、改行を使わない
 
 ## 出力例
-I want to establish a new human settlement in space.
+I want to deliver my grandmother's last recipe to her first love.
 
 ## 出力"""
 
@@ -885,9 +909,13 @@ I want to establish a new human settlement in space.
 - 英語で出力
 - 役割名と説明
 - 1つのみ
+- 戦士・魔法使い・治癒師・暗殺者のような定番の職業は避け、現代や近未来の職業と幻想を掛け合わせた具体的な役割にする
+- 「役割名. 説明1文」の形で、全体で20語以内
+- 元キャラクターの名前・役割・持ち物を参照せず、単独で意味が通る文にする
+- 記号や装飾（** など）、改行を使わない
 
 ## 出力例
-Swordsman. Skilled in the art of swordsmanship with a strong sense of duty.
+Umbrella Archivist. Catalogs every umbrella left behind on the city's trains.
 
 ## 出力"""
 

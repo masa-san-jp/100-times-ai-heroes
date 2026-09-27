@@ -1609,3 +1609,12 @@ def test_natural_prompt_stays_grammatical_for_free_form_llm_text():
     assert "ability to Possesses" not in prompt
     assert ".." not in prompt
     assert " Can " not in prompt
+
+
+def test_new_seed_files_are_initialized_from_bundled_seeds(tmp_path):
+    storage = LocalStorage(make_config(tmp_path))
+
+    assert len(storage._seed_values["role"]) >= 90
+    assert len(storage._seed_values["ability"]) >= 90
+    assert len(storage._seed_values["wants"]) >= 90
+    assert "Warrior. A skilled fighter dedicated to protecting others" not in storage._seed_values["role"]
