@@ -10,6 +10,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
@@ -133,6 +134,30 @@ WORKFLOW_CONFIGS = {
             },
         },
     },
+    "qwen_image_2_1_viggle_turbo_turnaround_api_workflow.json": {
+        "required_nodes": {
+            "1": "UNETLoader", "2": "CLIPLoader", "3": "VAELoader",
+            "5": "EmptyLatentImage", "10": "ViggleTurboLora",
+            "11": "ViggleTurboSigmas", "12": "BasicGuider",
+            "13": "KSamplerSelect", "14": "RandomNoise",
+            "15": "SamplerCustomAdvanced", "18": "TextEncodeQwenImage21",
+            "26": "LoadImage", "29": "QwenImage21Cache",
+            "7": "VAEDecode", "9": "SaveImage",
+        },
+        "injections": {
+            "positive_prompt": {"node": "18", "input": "prompt"},
+            "reference_image": {"node": "26", "input": "image"},
+            "seed": {"node": "14", "input": "noise_seed"},
+            "width": {"node": "5", "input": "width"},
+            "height": {"node": "5", "input": "height"},
+            "model_files": {
+                "diffusion_models": {"node": "1", "input": "unet_name"},
+                "text_encoders": {"node": "2", "input": "clip_name"},
+                "vae": {"node": "3", "input": "vae_name"},
+                "loras": {"node": "10", "input": "lora_name"},
+            },
+        },
+    },
 }
 
 
@@ -164,6 +189,10 @@ class ComfyUIImageGenerator:
         clock: Callable[[], float] = time.monotonic,
         sleeper: Callable[[float], None] = time.sleep,
         seed_factory: Callable[[], int] = lambda: secrets.randbelow(2**63),
+        turnaround_workflow_path: Optional[Path] = None,
+        turnaround_width: Optional[int] = None,
+        turnaround_height: Optional[int] = None,
+        turnaround_timeout_seconds: Optional[float] = None,
     ):
         parsed = urllib.parse.urlparse(base_url)
         if parsed.scheme != "http" or parsed.hostname not in {
@@ -198,11 +227,17 @@ class ComfyUIImageGenerator:
         self.clock = clock
         self.sleeper = sleeper
         self.seed_factory = seed_factory
+        self.turnaround_workflow_path = (
+            Path(turnaround_workflow_path) if turnaround_workflow_path else None
+        )
+        self.turnaround_width = turnaround_width
+        self.turnaround_height = turnaround_height
+        self.turnaround_timeout_seconds = turnaround_timeout_seconds
 
-    def _workflow_config(self) -> Dict[str, Any]:
+    def _workflow_config(self, workflow_path: Optional[Path] = None) -> Dict[str, Any]:
         # Unregistered (custom) workflows are treated as SDXL and validated as such.
         return WORKFLOW_CONFIGS.get(
-            self.workflow_path.name,
+            (workflow_path or self.workflow_path).name,
             {"required_nodes": SDXL_REQUIRED_NODES, "injections": SDXL_INJECTIONS},
         )
 
@@ -267,22 +302,23 @@ class ComfyUIImageGenerator:
         )
         self._request_bytes(request, timeout=min(self.timeout_seconds, 10.0))
 
-    def _load_workflow(self) -> Dict[str, Any]:
+    def _load_workflow(self, workflow_path: Optional[Path] = None) -> Dict[str, Any]:
+        selected_path = workflow_path or self.workflow_path
         try:
-            with open(self.workflow_path, "r", encoding="utf-8") as file:
+            with open(selected_path, "r", encoding="utf-8") as file:
                 workflow = json.load(file)
         except OSError as exc:
             raise ComfyUIConfigurationError(
-                f"Cannot read ComfyUI workflow: {self.workflow_path}"
+                f"Cannot read ComfyUI workflow: {selected_path}"
             ) from exc
         except json.JSONDecodeError as exc:
             raise ComfyUIConfigurationError(
-                f"ComfyUI workflow is not valid JSON: {self.workflow_path}"
+                f"ComfyUI workflow is not valid JSON: {selected_path}"
             ) from exc
 
         if not isinstance(workflow, dict):
             raise ComfyUIConfigurationError("ComfyUI workflow must be a JSON object")
-        for node_id, class_type in self._workflow_config()["required_nodes"].items():
+        for node_id, class_type in self._workflow_config(selected_path)["required_nodes"].items():
             node = workflow.get(node_id)
             if not isinstance(node, dict) or node.get("class_type") != class_type:
                 raise ComfyUIConfigurationError(
@@ -322,8 +358,19 @@ class ComfyUIImageGenerator:
         return names
 
     def _build_workflow(self, prompt: str, seed: int) -> Dict[str, Any]:
-        workflow = copy.deepcopy(self._load_workflow())
-        injections = self._workflow_config()["injections"]
+        return self._build_workflow_for(self.workflow_path, prompt, seed)
+
+    def _build_workflow_for(
+        self,
+        workflow_path: Path,
+        prompt: str,
+        seed: int,
+        reference_image: Optional[str] = None,
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        workflow = copy.deepcopy(self._load_workflow(workflow_path))
+        injections = self._workflow_config(workflow_path)["injections"]
         if self.model_files:
             model_file_names = self._model_file_names()
             targets = injections.get("model_files", {})
@@ -344,8 +391,8 @@ class ComfyUIImageGenerator:
             "cfg": self.cfg,
             "sampler": self.sampler,
             "scheduler": self.scheduler,
-            "width": self.width,
-            "height": self.height,
+            "width": self.width if width is None else width,
+            "height": self.height if height is None else height,
             "batch_size": 1,
         }
         for role, value in values.items():
@@ -365,6 +412,13 @@ class ComfyUIImageGenerator:
             self._set_input(workflow, clip_target, self.clip_skip)
             for connection in clip_target.get("connections", []):
                 self._set_input(workflow, connection, [str(clip_target["node"]), 0])
+        if reference_image is not None:
+            self._require_input(
+                workflow,
+                injections.get("reference_image"),
+                reference_image,
+                "reference image",
+            )
         return workflow
 
     def _queue(self, workflow: Dict[str, Any]) -> str:
@@ -382,8 +436,11 @@ class ComfyUIImageGenerator:
             raise ComfyUIError(f"ComfyUI did not return prompt_id: {details}")
         return prompt_id
 
-    def _wait_for_history(self, prompt_id: str) -> Dict[str, Any]:
-        deadline = self.clock() + self.timeout_seconds
+    def _wait_for_history(
+        self, prompt_id: str, timeout_seconds: Optional[float] = None
+    ) -> Dict[str, Any]:
+        timeout = self.timeout_seconds if timeout_seconds is None else timeout_seconds
+        deadline = self.clock() + timeout
         while self.clock() < deadline:
             request = urllib.request.Request(
                 self._url(f"history/{urllib.parse.quote(prompt_id, safe='')}")
@@ -402,7 +459,7 @@ class ComfyUIImageGenerator:
                     )
             self.sleeper(self.poll_interval_seconds)
         raise ComfyUITimeoutError(
-            f"ComfyUI timed out after {self.timeout_seconds}s for prompt {prompt_id}"
+            f"ComfyUI timed out after {timeout}s for prompt {prompt_id}"
         )
 
     @staticmethod
@@ -434,20 +491,49 @@ class ComfyUIImageGenerator:
             raise ComfyUIError("ComfyUI returned an empty image")
         return data
 
-    def generate(
-        self,
-        prompt: str,
-        output_dir: Path,
-        filename_stem: str,
-    ) -> GeneratedImage:
-        output_dir.mkdir(parents=True, exist_ok=True)
-        seed = self.seed_factory()
-        workflow = self._build_workflow(prompt, seed)
-        prompt_id = self._queue(workflow)
-        history = self._wait_for_history(prompt_id)
-        image_info = self._first_image(history)
-        image_bytes = self._download_image(image_info)
+    def upload_image(self, image_path: Path) -> str:
+        """Upload a local reference image and return ComfyUI's LoadImage name."""
+        path = Path(image_path)
+        try:
+            image_bytes = path.read_bytes()
+        except OSError as exc:
+            raise ComfyUIError(f"Cannot read reference image: {path}") from exc
 
+        boundary = f"----CodexComfyUI{uuid.uuid4().hex}"
+        boundary_bytes = boundary.encode("ascii")
+        filename = path.name.replace('"', "_")
+        parts = [
+            b"--" + boundary_bytes + b"\r\n"
+            + f'Content-Disposition: form-data; name="image"; filename="{filename}"\r\n'.encode("utf-8")
+            + b"Content-Type: image/png\r\n\r\n"
+            + image_bytes
+            + b"\r\n",
+            b"--" + boundary_bytes + b"\r\n"
+            + b'Content-Disposition: form-data; name="overwrite"\r\n\r\ntrue\r\n',
+            b"--" + boundary_bytes + b"--\r\n",
+        ]
+        request = urllib.request.Request(
+            self._url("upload/image"),
+            data=b"".join(parts),
+            headers={
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+                "Content-Length": str(sum(len(part) for part in parts)),
+            },
+            method="POST",
+        )
+        payload = self._request_json(request)
+        name = payload.get("name")
+        if not isinstance(name, str) or not name:
+            raise ComfyUIError(f"ComfyUI upload did not return an image name: {payload}")
+        subfolder = payload.get("subfolder", "")
+        return f"{subfolder}/{name}" if subfolder else name
+
+    upload_reference_image = upload_image
+
+    def _save_image_bytes(
+        self, image_bytes: bytes, output_dir: Path, filename_stem: str
+    ) -> Path:
+        output_dir.mkdir(parents=True, exist_ok=True)
         destination = output_dir / f"{filename_stem}.png"
         temporary = destination.with_suffix(".png.tmp")
         try:
@@ -460,5 +546,50 @@ class ComfyUIImageGenerator:
             except OSError:
                 pass
             raise ComfyUIError(f"Cannot save generated image: {destination}") from exc
+        return destination
 
+    def generate(
+        self,
+        prompt: str,
+        output_dir: Path,
+        filename_stem: str,
+    ) -> GeneratedImage:
+        seed = self.seed_factory()
+        workflow = self._build_workflow(prompt, seed)
+        prompt_id = self._queue(workflow)
+        history = self._wait_for_history(prompt_id)
+        image_info = self._first_image(history)
+        image_bytes = self._download_image(image_info)
+        destination = self._save_image_bytes(image_bytes, output_dir, filename_stem)
         return GeneratedImage(path=destination, seed=seed)
+
+    def generate_turnaround(
+        self,
+        prompt: str,
+        reference_image_path: Path,
+        output_dir: Path,
+        filename_stem: str = "turnaround",
+    ) -> GeneratedImage:
+        """Generate a turnaround sheet using an uploaded full-body reference."""
+        if self.turnaround_workflow_path is None:
+            raise ComfyUIConfigurationError("This image model has no turnaround workflow")
+        uploaded_name = self.upload_image(Path(reference_image_path))
+        seed = self.seed_factory()
+        workflow = self._build_workflow_for(
+            self.turnaround_workflow_path,
+            prompt,
+            seed,
+            reference_image=uploaded_name,
+            width=self.turnaround_width,
+            height=self.turnaround_height,
+        )
+        prompt_id = self._queue(workflow)
+        history = self._wait_for_history(
+            prompt_id, timeout_seconds=self.turnaround_timeout_seconds
+        )
+        image_info = self._first_image(history)
+        image_bytes = self._download_image(image_info)
+        destination = self._save_image_bytes(image_bytes, output_dir, filename_stem)
+        return GeneratedImage(path=destination, seed=seed)
+
+    generate_with_reference = generate_turnaround

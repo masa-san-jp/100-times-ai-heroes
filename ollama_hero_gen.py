@@ -12,6 +12,7 @@ import csv
 import json
 import os
 import random
+import re
 import shutil
 import sys
 import time
@@ -22,6 +23,7 @@ from typing import Any, Callable, Dict, List, Optional, Protocol
 
 import ollama
 from dotenv import load_dotenv
+from image_labels import label_image
 from image_model_profiles import (
     build_image_prompt,
     get_image_model_profile,
@@ -119,6 +121,7 @@ class Config:
     openai_api_key: Optional[str] = None
     openai_model: str = "gpt-4o-mini"
     generate_images: bool = False
+    generate_turnaround: bool = True
     comfyui_url: str = "http://127.0.0.1:8188"
     comfyui_model_profile: str = "generic-sdxl"
     comfyui_model_profiles_path: str = "./config/comfyui/model_profiles.json"
@@ -177,6 +180,7 @@ class Config:
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
             openai_model=openai_model,
             generate_images=_env_bool("GENERATE_IMAGES", False),
+            generate_turnaround=_env_bool("GENERATE_TURNAROUND", True),
             comfyui_url=os.getenv("COMFYUI_URL", "http://127.0.0.1:8188"),
             comfyui_model_profile=model_profile_id,
             comfyui_model_profiles_path=model_profiles_path,
@@ -409,6 +413,8 @@ class LocalStorage:
         "role",
         "image_path",
         "image_seed",
+        "turnaround_path",
+        "height_cm",
         "character_dir",
     ]
 
@@ -655,10 +661,21 @@ class LocalStorage:
             json.dump(character_data, file, ensure_ascii=False, indent=2)
             file.write("\n")
 
-        image = character_data["image"]
+        images = character_data["images"]
+        full_body = images.get("full_body") if images is not None else None
+        turnaround = images.get("turnaround") if images is not None else None
         lines = [f"# {character_data['name']}", ""]
-        if image is not None:
-            lines.extend([f"![{character_data['name']}](image.png)", ""])
+        if full_body is not None:
+            lines.extend([f"![{character_data['name']}](full_body.png)", ""])
+        if turnaround is not None:
+            lines.extend(
+                [
+                    "## 3面図",
+                    "",
+                    f"![{character_data['name']} 3面図](turnaround.png)",
+                    "",
+                ]
+            )
         lines.extend(
             [
                 f"> {character_data['catchphrase']}",
@@ -667,6 +684,7 @@ class LocalStorage:
                 character_data["profile"],
                 "",
                 "## 設定",
+                f"- 身長: {character_data['height_cm']}cm",
                 f"- 年齢: {character_data['attributes']['age']}",
                 f"- 性別: {character_data['attributes']['gender']}",
                 f"- 種族: {character_data['attributes']['species']}",
@@ -680,13 +698,13 @@ class LocalStorage:
                 "## 生成条件",
             ]
         )
-        if image is not None:
+        if full_body is not None:
             lines.extend(
                 [
-                    f"- 画像モデル: {image['model_profile']}（seed {image['seed']}）",
+                    f"- 画像モデル: {full_body['model_profile']}（seed {full_body['seed']}）",
                     f"- LLM: {character_data['generation']['llm_provider']} / "
                     f"{character_data['generation']['llm_model']}",
-                    f"- 画像プロンプト: {image['prompt']}",
+                    f"- 画像プロンプト: {full_body['prompt']}",
                 ]
             )
         else:
@@ -694,6 +712,8 @@ class LocalStorage:
                 f"- LLM: {character_data['generation']['llm_provider']} / "
                 f"{character_data['generation']['llm_model']}"
             )
+        if turnaround is not None:
+            lines.append(f"- 3面図 seed: {turnaround['seed']}")
         (directory / "character.md").write_text(
             "\n".join(lines) + "\n", encoding="utf-8"
         )
@@ -737,6 +757,17 @@ class LocalStorage:
 
 class Prompts:
     """キャラクター生成用プロンプト。"""
+
+    TURNAROUND = (
+        "Character turnaround reference sheet of the character in image 1. The same "
+        "character is shown three times side by side in a T-pose with both arms "
+        "stretched straight out horizontally: front view on the left, side view in "
+        "the middle, back view on the right. Each view is full body from head to "
+        "feet. The face, hairstyle, outfit, colors, materials and accessories are "
+        "identical to image 1, with the same body proportions and the same height in "
+        "all three views. Plain white background, clean anime illustration style, "
+        "evenly spaced, no text, no labels, no watermark."
+    )
 
     @staticmethod
     def character_concept(physical: str, role: str, ability: str, wants: str) -> str:
@@ -860,6 +891,22 @@ Swordsman. Skilled in the art of swordsmanship with a strong sense of duty.
 
 ## 出力"""
 
+    @staticmethod
+    def height(concept: str, age: str, species: str) -> str:
+        return f"""以下のキャラクターの身長を、コンセプト・年齢・種族から判断して決めてください。
+
+## キャラクター設定
+{concept}
+- 年齢: {age}
+- 種族: {species}
+
+## ルール
+- 身長をセンチメートル単位の整数だけで出力
+- 数字以外の説明、単位、文章は不要
+- 例: 142
+
+## 出力"""
+
 
 # =============================================================================
 # Image prompt and generation orchestration
@@ -896,6 +943,27 @@ def _stage(stage: str, function: Callable[[], Any]) -> Any:
         raise
     except Exception as exc:
         raise StageError(stage, exc) from exc
+
+
+def _parse_height(response: str) -> int:
+    match = re.search(r"\d+", str(response))
+    if match is None:
+        raise ValueError("Height response did not contain an integer")
+    height = int(match.group(0))
+    if not 10 <= height <= 2000:
+        raise ValueError(f"Height must be between 10 and 2000 cm: {height}")
+    return height
+
+
+def _generate_height(llm: TextGenerator, concept: str, age: str, species: str) -> int:
+    prompt = Prompts.height(concept, age, species)
+    last_error: Optional[Exception] = None
+    for _ in range(3):
+        try:
+            return _parse_height(llm.generate(prompt))
+        except ValueError as exc:
+            last_error = exc
+    raise ValueError(f"Could not obtain a valid height after 3 attempts: {last_error}")
 
 
 def _workflow_uses_negative_prompt(workflow_path: str) -> bool:
@@ -937,6 +1005,21 @@ def _create_image_generator(config: Config) -> Any:
         negative_prompt=config.comfyui_negative_prompt,
         clip_skip=config.comfyui_clip_skip,
         model_files=profile.model_files,
+        turnaround_workflow_path=(
+            Path(profile.turnaround_workflow_path)
+            if profile.turnaround_workflow_path
+            else None
+        ),
+        turnaround_width=profile.turnaround_width,
+        turnaround_height=profile.turnaround_height,
+        turnaround_timeout_seconds=profile.turnaround_timeout_seconds,
+    )
+
+
+def _turnaround_profile(config: Config) -> Any:
+    return get_image_model_profile(
+        config.comfyui_model_profile,
+        Path(config.comfyui_model_profiles_path),
     )
 
 
@@ -950,9 +1033,16 @@ def generate_characters(
     llm = text_generator or create_text_generator(config)
     local_storage = storage or LocalStorage(config)
 
+    turnaround_supported = bool(
+        config.generate_images
+        and config.generate_turnaround
+        and _turnaround_profile(config).turnaround_workflow_path
+    )
     if config.generate_images:
         image_generator = image_generator or _create_image_generator(config)
         _stage("image", image_generator.check_connection)
+        if config.generate_turnaround and not turnaround_supported:
+            print("このモデルは3面図に対応していません")
 
     print(f"Starting generation with provider: {config.provider}")
     print(f"Model: {config.model}")
@@ -1007,6 +1097,9 @@ def generate_characters(
             new_role = _stage(
                 "new_role", lambda: llm.generate(Prompts.new_role(concept))
             )
+            height_cm = _stage(
+                "height", lambda: _generate_height(llm, concept, age, species)
+            )
 
             character_id = f"{iteration:03d}_{_safe_filename(name)}"
             temporary_dir, final_character_dir = local_storage.character_paths(
@@ -1016,8 +1109,19 @@ def generate_characters(
             temporary_dir.mkdir(parents=True, exist_ok=True)
             image_path = ""
             image_seed = ""
-            image_data: Optional[Dict[str, Any]] = None
+            turnaround_path = ""
+            images_data: Optional[Dict[str, Any]] = None
             if config.generate_images:
+                raw_dir = temporary_dir / "raw"
+                raw_dir.mkdir(parents=True, exist_ok=True)
+
+                def move_generated(result: Any, destination: Path) -> Any:
+                    generated_path = Path(result.path)
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    if generated_path != destination:
+                        generated_path.replace(destination)
+                    return result
+
                 def generate_image() -> Any:
                     if config.memory_guard_enabled:
                         try:
@@ -1033,25 +1137,30 @@ def generate_characters(
                             )
                     result = image_generator.generate(
                         image_prompt,
-                        temporary_dir,
-                        "image",
+                        raw_dir,
+                        "full_body",
                     )
-                    image_file = temporary_dir / "image.png"
-                    generated_path = Path(result.path)
-                    if generated_path != image_file:
-                        generated_path.replace(image_file)
-                    return result
+                    return move_generated(result, raw_dir / "full_body.png")
 
                 image_result = _stage(
                     "image",
                     generate_image,
                 )
-                image_path = local_storage.relative_run_path(
-                    final_character_dir / "image.png"
+                labeled_full_body = temporary_dir / "full_body.png"
+                _stage(
+                    "label",
+                    lambda: label_image(
+                        raw_dir / "full_body.png",
+                        labeled_full_body,
+                        name,
+                        height_cm,
+                    ),
                 )
+                image_path = local_storage.relative_run_path(final_character_dir / "full_body.png")
                 image_seed = str(image_result.seed)
-                image_data = {
-                    "file": "image.png",
+                full_body_data = {
+                    "file": "full_body.png",
+                    "raw_file": "raw/full_body.png",
                     "prompt": image_prompt,
                     "negative_prompt": (
                         config.comfyui_negative_prompt
@@ -1063,15 +1172,51 @@ def generate_characters(
                     "width": config.comfyui_width,
                     "height": config.comfyui_height,
                 }
+                turnaround_data = None
+                if turnaround_supported:
+                    def generate_turnaround() -> Any:
+                        result = image_generator.generate_turnaround(
+                            Prompts.TURNAROUND,
+                            raw_dir / "full_body.png",
+                            raw_dir,
+                            "turnaround",
+                        )
+                        return move_generated(result, raw_dir / "turnaround.png")
+
+                    turnaround_result = _stage("turnaround", generate_turnaround)
+                    labeled_turnaround = temporary_dir / "turnaround.png"
+                    _stage(
+                        "label",
+                        lambda: label_image(
+                            raw_dir / "turnaround.png",
+                            labeled_turnaround,
+                            name,
+                            height_cm,
+                        ),
+                    )
+                    turnaround_path = local_storage.relative_run_path(
+                        final_character_dir / "turnaround.png"
+                    )
+                    turnaround_data = {
+                        "file": "turnaround.png",
+                        "raw_file": "raw/turnaround.png",
+                        "prompt": Prompts.TURNAROUND,
+                        "seed": turnaround_result.seed,
+                        "model_profile": config.comfyui_model_profile,
+                        "width": _turnaround_profile(config).turnaround_width,
+                        "height": _turnaround_profile(config).turnaround_height,
+                    }
+                images_data = {"full_body": full_body_data, "turnaround": turnaround_data}
 
             character_data = {
-                "schema_version": 1,
+                "schema_version": 2,
                 "id": character_id,
                 "iteration": iteration,
                 "created_at": datetime.now(timezone.utc)
                 .isoformat()
                 .replace("+00:00", "Z"),
                 "name": name,
+                "height_cm": height_cm,
                 "profile": profile,
                 "catchphrase": catchphrase,
                 "concept": concept,
@@ -1088,7 +1233,7 @@ def generate_characters(
                     "wants": new_wants,
                     "role": new_role,
                 },
-                "image": image_data,
+                "images": images_data,
                 "generation": {
                     "llm_provider": config.provider,
                     "llm_model": config.model,
@@ -1109,6 +1254,8 @@ def generate_characters(
                 role,
                 image_path,
                 image_seed,
+                turnaround_path,
+                height_cm,
                 local_storage.relative_run_path(final_character_dir),
             ]
             _stage(
@@ -1156,6 +1303,7 @@ def main(
     model: Optional[str] = None,
     provider: Optional[str] = None,
     generate_images: Optional[bool] = None,
+    generate_turnaround: Optional[bool] = None,
 ) -> int:
     try:
         config = Config.from_env()
@@ -1172,6 +1320,8 @@ def main(
                 overrides["model"] = os.getenv("OLLAMA_MODEL", "gpt-oss:20b")
         if generate_images is not None:
             overrides["generate_images"] = generate_images
+        if generate_turnaround is not None:
+            overrides["generate_turnaround"] = generate_turnaround
         config = replace(config, **overrides)
         if config.num_iterations < 1:
             raise ValueError("iterations must be greater than 0")
@@ -1230,6 +1380,11 @@ if __name__ == "__main__":
         action="store_true",
         help="localhost上のComfyUIで画像も生成する",
     )
+    parser.add_argument(
+        "--no-turnaround",
+        action="store_true",
+        help="3面図を生成しない",
+    )
     args = parser.parse_args()
 
     raise SystemExit(
@@ -1238,5 +1393,6 @@ if __name__ == "__main__":
             model=args.model,
             provider=args.provider,
             generate_images=True if args.generate_images else None,
+            generate_turnaround=False if args.no_turnaround else None,
         )
     )

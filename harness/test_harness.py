@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import csv
 import copy
+import io
 import json
 import sys
 from pathlib import Path
@@ -15,6 +16,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
+from PIL import Image
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -87,6 +89,8 @@ class FakeTextGenerator:
         self.calls += 1
         if self.fail_at is not None and self.calls == self.fail_at:
             raise TimeoutError("fake timeout")
+        if "身長" in prompt:
+            return "142"
         return self.responses.pop(0)
 
 
@@ -102,8 +106,25 @@ class FakeImageGenerator:
         self.calls.append(prompt)
         output_dir.mkdir(parents=True, exist_ok=True)
         path = output_dir / f"{filename_stem}.png"
-        path.write_bytes(b"fake png")
+        Image.new("RGB", (8, 8), (20, 40, 60)).save(path)
         return GeneratedImage(path=path, seed=12345)
+
+
+class FakeTurnaroundImageGenerator(FakeImageGenerator):
+    def __init__(self, fail_turnaround=False):
+        super().__init__()
+        self.turnaround_references = []
+        self.fail_turnaround = fail_turnaround
+
+    def generate_turnaround(self, prompt, reference_path, output_dir, filename_stem):
+        self.turnaround_references.append((prompt, Path(reference_path)))
+        output_dir.mkdir(parents=True, exist_ok=True)
+        if self.fail_turnaround:
+            (output_dir / "turnaround.png.tmp").write_bytes(b"partial")
+            raise RuntimeError("turnaround failed")
+        path = output_dir / f"{filename_stem}.png"
+        Image.new("RGB", (10, 6), (80, 70, 60)).save(path)
+        return GeneratedImage(path=path, seed=67890)
 
 
 def test_config_defaults_and_env(monkeypatch, tmp_path):
@@ -466,7 +487,7 @@ def test_generation_writes_csv_and_expands_seeds(tmp_path):
     assert rows[0] == LocalStorage.OUTPUT_HEADERS
     assert len(rows[1]) == len(LocalStorage.OUTPUT_HEADERS)
     assert rows[1][0] == "Test Name"
-    assert rows[1][-3:] == ["", "", "characters/001_Test_Name"]
+    assert rows[1][-4:] == ["", "", "142", "characters/001_Test_Name"]
     assert "New ability" in storage._seed_values["ability"]
     assert "I want to win." in storage._seed_values["wants"]
     assert "New role" in storage._seed_values["role"]
@@ -476,7 +497,7 @@ def test_commit_rolls_back_when_second_seed_append_fails(monkeypatch, tmp_path):
     storage = LocalStorage(make_config(tmp_path))
     row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
         "value"
-    ] * 6 + ["", "", "characters/001_Name"]
+    ] * 6 + ["", "", "", 142, "characters/001_Name"]
     seed_updates = {
         "ability": "New ability",
         "wants": "New wants",
@@ -513,7 +534,7 @@ def test_commit_rolls_back_on_keyboard_interrupt(monkeypatch, tmp_path):
     storage = LocalStorage(make_config(tmp_path))
     row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
         "value"
-    ] * 6 + ["", "", "characters/001_Name"]
+    ] * 6 + ["", "", "", 142, "characters/001_Name"]
     paths = [storage.output_file, *storage.seed_files.values()]
     files_before = {path: path.read_bytes() for path in paths}
     original_append_seed = storage.append_seed
@@ -537,7 +558,7 @@ def test_commit_rolls_back_when_output_append_fails(monkeypatch, tmp_path):
     storage = LocalStorage(make_config(tmp_path))
     row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
         "value"
-    ] * 6 + ["", "", "characters/001_Name"]
+    ] * 6 + ["", "", "", 142, "characters/001_Name"]
     seed_updates = {
         "ability": "New ability",
         "wants": "New wants",
@@ -567,7 +588,7 @@ def test_commit_rollback_failure_raises_runtime_error_with_original_cause(
     storage = LocalStorage(make_config(tmp_path))
     row = ["Name", "Profile", "Catchphrase", "Prompt", "Concept"] + [
         "value"
-    ] * 6 + ["", "", "characters/001_Name"]
+    ] * 6 + ["", "", "", 142, "characters/001_Name"]
     seed_updates = {
         "ability": "New ability",
         "wants": "New wants",
@@ -716,15 +737,15 @@ def test_generation_failure_keeps_previous_rows_and_records_error(tmp_path):
     with pytest.raises(StageError) as error:
         generate_characters(config, text_generator=text_generator, storage=storage)
 
-    assert error.value.stage == "character_concept"
+    assert error.value.stage == "height"
     with storage.output_file.open(newline="", encoding="utf-8") as file:
-        assert len(list(csv.reader(file))) == 2
+        assert len(list(csv.reader(file))) == 1
     assert not storage.errors_file.exists() or storage.errors_file.read_text(
         encoding="utf-8"
     )
     event = json.loads(storage.errors_file.read_text(encoding="utf-8").splitlines()[0])
-    assert event["iteration"] == 2
-    assert event["stage"] == "character_concept"
+    assert event["iteration"] == 1
+    assert event["stage"] == "height"
     assert event["error_type"] == "TimeoutError"
 
 
@@ -760,9 +781,11 @@ def test_image_generation_writes_path_and_seed(tmp_path):
     assert len(image_generator.calls) == 1
     with output_file.open(newline="", encoding="utf-8") as file:
         row = list(csv.reader(file))[1]
-    assert row[-3] == "characters/001_Test_Name/image.png"
-    assert row[-2] == "12345"
-    assert (storage.run_dir / row[-3]).exists()
+    assert row[-5] == "characters/001_Test_Name/full_body.png"
+    assert row[-4] == "12345"
+    assert row[-3] == ""
+    assert row[-2] == "142"
+    assert (storage.run_dir / row[-5]).exists()
     assert row[-1] == "characters/001_Test_Name"
 
 
@@ -798,19 +821,21 @@ def test_two_image_characters_have_complete_per_character_outputs(tmp_path):
         "iteration",
         "created_at",
         "name",
+        "height_cm",
         "profile",
         "catchphrase",
         "concept",
         "attributes",
         "new_seeds",
-        "image",
+        "images",
         "generation",
     }
     for row in rows:
         character_dir = storage.run_dir / row["character_dir"]
-        assert row["image_path"] == f"{row['character_dir']}/image.png"
+        assert row["image_path"] == f"{row['character_dir']}/full_body.png"
         assert (character_dir / "character.md").exists()
-        assert (character_dir / "image.png").exists()
+        assert (character_dir / "full_body.png").exists()
+        assert (character_dir / "raw" / "full_body.png").exists()
         character = json.loads(
             (character_dir / "character.json").read_text(encoding="utf-8")
         )
@@ -824,9 +849,9 @@ def test_two_image_characters_have_complete_per_character_outputs(tmp_path):
             key: row[key]
             for key in ("age", "gender", "species", "ability", "wants", "role")
         }
-        assert character["image"]["file"] == "image.png"
-        assert character["image"]["prompt"] == row["image_prompt"]
-        assert str(character["image"]["seed"]) == row["image_seed"]
+        assert character["images"]["full_body"]["file"] == "full_body.png"
+        assert character["images"]["full_body"]["prompt"] == row["image_prompt"]
+        assert str(character["images"]["full_body"]["seed"]) == row["image_seed"]
         assert "OPENAI_API_KEY" not in json.dumps(character)
 
 
@@ -845,8 +870,9 @@ def test_no_image_output_has_null_image_and_no_image_markdown(tmp_path):
         (character_dir / "character.json").read_text(encoding="utf-8")
     )
     markdown = (character_dir / "character.md").read_text(encoding="utf-8")
-    assert character["image"] is None
-    assert not (character_dir / "image.png").exists()
+    assert character["images"] is None
+    assert character["height_cm"] == 142
+    assert not (character_dir / "full_body.png").exists()
     assert "![" not in markdown
     assert "画像モデル:" not in markdown
     assert "## プロフィール" in markdown
@@ -947,6 +973,124 @@ def test_memory_guard_records_image_stage_and_stops(tmp_path, monkeypatch):
     assert event["stage"] == "image"
 
 
+def test_height_parsing_retries_invalid_answers_and_accepts_first_integer():
+    class HeightGenerator:
+        def __init__(self):
+            self.responses = iter(["身長は不明", "2501", "約142cmです"])
+            self.prompts = []
+
+        def generate(self, prompt, max_retries=3):
+            self.prompts.append(prompt)
+            return next(self.responses)
+
+    generator = HeightGenerator()
+    assert app._generate_height(generator, "concept", "Child", "Elf") == 142
+    assert len(generator.prompts) == 3
+    assert "Child" in generator.prompts[0]
+    assert "Elf" in generator.prompts[0]
+
+
+def test_turnaround_output_is_labeled_and_uses_raw_full_body_reference(tmp_path):
+    config = make_config(
+        tmp_path,
+        generate_images=True,
+        comfyui_model_profile="qwen-image-2.1-turbo",
+        comfyui_model_profiles_path=str(
+            PROJECT_ROOT / "config/comfyui/model_profiles.json"
+        ),
+    )
+    storage = LocalStorage(config)
+    image_generator = FakeTurnaroundImageGenerator()
+
+    output_file = generate_characters(
+        config,
+        text_generator=FakeTextGenerator(),
+        storage=storage,
+        image_generator=image_generator,
+    )
+
+    row = next(csv.DictReader(output_file.open(newline="", encoding="utf-8")))
+    character_dir = storage.run_dir / row["character_dir"]
+    assert row["image_path"].endswith("/full_body.png")
+    assert row["turnaround_path"].endswith("/turnaround.png")
+    assert row["height_cm"] == "142"
+    for relative in (
+        "full_body.png",
+        "turnaround.png",
+        "raw/full_body.png",
+        "raw/turnaround.png",
+        "character.json",
+        "character.md",
+    ):
+        assert (character_dir / relative).exists()
+
+    raw_full_body = Image.open(character_dir / "raw/full_body.png")
+    labeled_full_body = Image.open(character_dir / "full_body.png")
+    assert labeled_full_body.size == (8, 88)
+    assert labeled_full_body.crop((0, 0, 8, 8)).tobytes() == raw_full_body.tobytes()
+    assert image_generator.turnaround_references[0][1].as_posix().endswith(
+        "/raw/full_body.png"
+    )
+    character = json.loads((character_dir / "character.json").read_text(encoding="utf-8"))
+    assert character["schema_version"] == 2
+    assert character["height_cm"] == 142
+    assert character["images"]["full_body"]["raw_file"] == "raw/full_body.png"
+    assert character["images"]["turnaround"]["seed"] == 67890
+    markdown = (character_dir / "character.md").read_text(encoding="utf-8")
+    assert "## 3面図" in markdown
+    assert "身長: 142cm" in markdown
+
+
+def test_no_turnaround_leaves_turnaround_null(tmp_path):
+    config = make_config(
+        tmp_path,
+        generate_images=True,
+        generate_turnaround=False,
+        comfyui_model_profile="qwen-image-2.1-turbo",
+        comfyui_model_profiles_path=str(
+            PROJECT_ROOT / "config/comfyui/model_profiles.json"
+        ),
+    )
+    storage = LocalStorage(config)
+    output_file = generate_characters(
+        config,
+        text_generator=FakeTextGenerator(),
+        storage=storage,
+        image_generator=FakeTurnaroundImageGenerator(),
+    )
+    row = next(csv.DictReader(output_file.open(newline="", encoding="utf-8")))
+    character_dir = storage.run_dir / row["character_dir"]
+    character = json.loads((character_dir / "character.json").read_text(encoding="utf-8"))
+    assert character["images"]["turnaround"] is None
+    assert row["turnaround_path"] == ""
+    assert not (character_dir / "turnaround.png").exists()
+
+
+def test_turnaround_failure_rolls_back_character_and_seeds(tmp_path):
+    config = make_config(
+        tmp_path,
+        generate_images=True,
+        comfyui_model_profile="qwen-image-2.1-turbo",
+        comfyui_model_profiles_path=str(
+            PROJECT_ROOT / "config/comfyui/model_profiles.json"
+        ),
+    )
+    storage = LocalStorage(config)
+    seed_files_before = {path: path.read_bytes() for path in storage.seed_files.values()}
+    with pytest.raises(StageError) as error:
+        generate_characters(
+            config,
+            text_generator=FakeTextGenerator(),
+            storage=storage,
+            image_generator=FakeTurnaroundImageGenerator(fail_turnaround=True),
+        )
+    assert error.value.stage == "turnaround"
+    assert not list(storage.characters_dir.glob(".tmp_*"))
+    assert not (storage.characters_dir / "001_Test_Name").exists()
+    assert {path: path.read_bytes() for path in storage.seed_files.values()} == seed_files_before
+    assert len(list(csv.reader(storage.output_file.open(newline="", encoding="utf-8")))) == 1
+
+
 class FakeHTTPResponse:
     def __init__(self, payload: bytes):
         self.payload = payload
@@ -1004,6 +1148,67 @@ def test_comfyui_api_queue_history_and_download(tmp_path):
     assert result.seed == 42
     assert result.path.read_bytes() == b"png bytes"
     assert [method for method, _ in calls] == ["GET", "POST", "GET", "GET"]
+
+
+def test_comfyui_turnaround_uploads_reference_and_injects_returned_name(tmp_path):
+    reference = tmp_path / "raw_full_body.png"
+    Image.new("RGB", (4, 4), "blue").save(reference)
+    response_image = io.BytesIO()
+    Image.new("RGB", (6, 4), "white").save(response_image, format="PNG")
+    calls = []
+    queued_workflows = []
+
+    def opener(request, timeout=None):
+        calls.append(request)
+        if request.full_url.endswith("/upload/image"):
+            body = request.data
+            assert b'name="overwrite"' in body
+            assert b"true" in body
+            return FakeHTTPResponse(b'{"name":"uploaded-reference.png","subfolder":""}')
+        if request.full_url.endswith("/prompt"):
+            queued_workflows.append(json.loads(request.data.decode("utf-8"))["prompt"])
+            return FakeHTTPResponse(b'{"prompt_id":"turnaround-id"}')
+        if "/history/turnaround-id" in request.full_url:
+            return FakeHTTPResponse(
+                b'{"turnaround-id":{"status":{"status_str":"success"},"outputs":{"9":{"images":[{"filename":"turnaround.png","subfolder":"","type":"output"}]}}}}'
+            )
+        if "/view?" in request.full_url:
+            return FakeHTTPResponse(response_image.getvalue())
+        raise AssertionError(request.full_url)
+
+    model_files = [
+        {"subdir": "diffusion_models", "filename": "unet.safetensors"},
+        {"subdir": "text_encoders", "filename": "clip.safetensors"},
+        {"subdir": "vae", "filename": "vae.safetensors"},
+        {"subdir": "loras", "filename": "lora.safetensors"},
+    ]
+    generator = ComfyUIImageGenerator(
+        base_url="http://127.0.0.1:8188",
+        workflow_path=PROJECT_ROOT / "config/comfyui/qwen_image_2_1_viggle_turbo_api_workflow.json",
+        checkpoint_name="model.safetensors",
+        model_files=model_files,
+        turnaround_workflow_path=PROJECT_ROOT / "config/comfyui/qwen_image_2_1_viggle_turbo_turnaround_api_workflow.json",
+        turnaround_width=1472,
+        turnaround_height=832,
+        turnaround_timeout_seconds=900,
+        opener=opener,
+        sleeper=lambda _: None,
+        seed_factory=lambda: 22,
+    )
+
+    result = generator.generate_turnaround(
+        "fixed turnaround prompt", reference, tmp_path / "out"
+    )
+
+    assert result.seed == 22
+    assert result.path.exists()
+    workflow = queued_workflows[0]
+    assert workflow["18"]["inputs"]["prompt"] == "fixed turnaround prompt"
+    assert workflow["26"]["inputs"]["image"] == "uploaded-reference.png"
+    assert workflow["14"]["inputs"]["noise_seed"] == 22
+    assert workflow["5"]["inputs"]["width"] == 1472
+    assert workflow["5"]["inputs"]["height"] == 832
+    assert [request.get_method() for request in calls] == ["POST", "POST", "GET", "GET"]
 
 
 def test_comfyui_history_timeout_uses_injected_clock(tmp_path):
