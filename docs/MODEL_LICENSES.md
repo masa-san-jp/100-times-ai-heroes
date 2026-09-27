@@ -14,9 +14,16 @@
 | `illustrious-xl-v2` | Illustrious XL v2.0 | [CreativeML Open RAIL-M](https://huggingface.co/spaces/CompVis/stable-diffusion-license) | 可（利用制限あり） | 権利を主張しない。使い方の責任は利用者 | [公式](https://huggingface.co/OnomaAIResearch/Illustrious-XL-v2.0) |
 | `pony-v6-xl` | Pony Diffusion V6 XL | Modified Fair AI Public License 1.0-SD（[原典: Civitai のモデルページ](https://civitai.com/models/257749)） | 要許可。収益化しているサイトやアプリでの推論は禁止 | 原典で確認が必要 | [非公式の再配布](https://huggingface.co/LyliaEngine/Pony_Diffusion_V6_XL) |
 | `noobai-xl-1.1` | NoobAI XL 1.1 | [Fair AI Public License 1.0-SD](https://freedevproject.org/faipl-1.0-sd/) | 可（利用制限、派生物の公開条件あり） | ライセンスの対象外（権利を主張しない） | [公式](https://huggingface.co/Laxhar/noobai-XL-1.1) |
-| `qwen-image-2.1`（既定） | Qwen-Image 2.1 | [Qwen Research License Agreement（2026-09-20）](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE) | 不可（別途契約が必要）。利用目的は研究・評価に限られる | 使い道を直接制限する条項はない | [公式](https://huggingface.co/Qwen/Qwen-Image-2.1)（ComfyUI 用の再パッケージは [Comfy-Org](https://huggingface.co/Comfy-Org/Qwen-Image-2.1)） |
+| `qwen-image-2.1-turbo`（既定） | Qwen-Image 2.1 + Viggle 6ステップLoRA | [Qwen Research License Agreement（2026-09-20）](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE) | 不可（別途契約が必要）。利用目的は研究・評価に限られる | Viggleの派生物。Qwenの表示（`Built with Qwen`）が必要 | [Viggle/Qwen-Image-2.1-viggle-turbo](https://huggingface.co/Viggle/Qwen-Image-2.1-viggle-turbo)（コミット `bb26a0f38e5fe6c124aaccc9187a87eed5d9ed13`） |
+| `qwen-image-2.1` | Qwen-Image 2.1 | [Qwen Research License Agreement（2026-09-20）](https://huggingface.co/Qwen/Qwen-Image-2.1/blob/main/LICENSE) | 不可（別途契約が必要）。利用目的は研究・評価に限られる | 使い道を直接制限する条項はない | [公式](https://huggingface.co/Qwen/Qwen-Image-2.1)（ComfyUI 用の再パッケージは [Comfy-Org](https://huggingface.co/Comfy-Org/Qwen-Image-2.1)） |
 
 ## モデルごとの要点
+
+### Viggle turbo のLoRAとComfyUI拡張
+
+- LoRAは [Viggle/Qwen-Image-2.1-viggle-turbo](https://huggingface.co/Viggle/Qwen-Image-2.1-viggle-turbo) のコミット `bb26a0f38e5fe6c124aaccc9187a87eed5d9ed13` から取得する
+- ViggleのNOTICEに従い、Qwenを基にした派生物であることを `Built with Qwen` と表示する
+- ComfyUI拡張 `comfyui/viggle_turbo.py` も同じコミットから取得する。コードのライセンスは取得元リポジトリのライセンスおよびNOTICEに従う。`setup_local.py` はURLとSHA256（`017911bb7d9c855c6ea6854adeeeea1aed576ca1c9cb487376419f5bae14e93d`）を固定して導入する
 
 ### Animagine XL 4.0 — CreativeML Open RAIL++-M
 

@@ -33,6 +33,7 @@ DEFAULT_PROFILE_IDS = [
     "pony-v6-xl",
     "noobai-xl-1.1",
     "qwen-image-2.1",
+    "qwen-image-2.1-turbo",
 ]
 
 SHARED_WIDTH = 832

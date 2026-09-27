@@ -50,6 +50,7 @@ class ImageModelProfile:
     model_sha256: str = ""
     workflow_path: str = DEFAULT_WORKFLOW_PATH
     model_files: List[ImageModelFile] = field(default_factory=list)
+    custom_nodes: List[dict] = field(default_factory=list)
     license_note: str = ""
     timeout_seconds: float = 300.0
 
@@ -182,6 +183,7 @@ def _profile_from_dict(profile_id: str, value: dict) -> ImageModelProfile:
             )
             for model_file in _parse_model_files(profile_id, value.get("model_files", []))
         ],
+        custom_nodes=_parse_custom_nodes(profile_id, value.get("custom_nodes", [])),
         license_note=str(value.get("license_note", "")),
         timeout_seconds=float(value.get("timeout_seconds", 300)),
     )
@@ -206,6 +208,34 @@ def _parse_model_files(profile_id: str, value: object) -> List[dict]:
                 f"{', '.join(missing)}"
             )
         parsed.append(model_file)
+    return parsed
+
+
+def _parse_custom_nodes(profile_id: str, value: object) -> List[dict]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"Image model profile {profile_id} custom_nodes must be a list")
+    required = {"filename", "url", "sha256"}
+    parsed = []
+    for index, custom_node in enumerate(value):
+        if not isinstance(custom_node, dict):
+            raise ValueError(
+                f"Image model profile {profile_id} custom_nodes[{index}] must be an object"
+            )
+        missing = sorted(required - custom_node.keys())
+        if missing:
+            raise ValueError(
+                f"Image model profile {profile_id} custom_nodes[{index}] is missing: "
+                f"{', '.join(missing)}"
+            )
+        parsed.append(
+            {
+                "filename": str(custom_node["filename"]),
+                "url": str(custom_node["url"]),
+                "sha256": str(custom_node["sha256"]),
+            }
+        )
     return parsed
 
 

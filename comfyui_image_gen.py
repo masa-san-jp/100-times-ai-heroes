@@ -104,6 +104,35 @@ WORKFLOW_CONFIGS = {
             },
         },
     },
+    "qwen_image_2_1_viggle_turbo_api_workflow.json": {
+        "required_nodes": {
+            "1": "UNETLoader",
+            "2": "CLIPLoader",
+            "3": "VAELoader",
+            "4": "TextEncodeQwenImage21",
+            "5": "EmptyLatentImage",
+            "10": "ViggleTurboLora",
+            "11": "ViggleTurboSigmas",
+            "12": "BasicGuider",
+            "13": "KSamplerSelect",
+            "14": "RandomNoise",
+            "15": "SamplerCustomAdvanced",
+            "7": "VAEDecode",
+            "9": "SaveImage",
+        },
+        "injections": {
+            "positive_prompt": {"node": "4", "input": "prompt"},
+            "seed": {"node": "14", "input": "noise_seed"},
+            "width": {"node": "5", "input": "width"},
+            "height": {"node": "5", "input": "height"},
+            "model_files": {
+                "diffusion_models": {"node": "1", "input": "unet_name"},
+                "text_encoders": {"node": "2", "input": "clip_name"},
+                "vae": {"node": "3", "input": "vae_name"},
+                "loras": {"node": "10", "input": "lora_name"},
+            },
+        },
+    },
 }
 
 
