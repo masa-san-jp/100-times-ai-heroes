@@ -88,3 +88,25 @@ def test_download_model_skips_a_verified_existing_file(tmp_path, capsys):
     setup_local._download_model(profile, destination, assume_yes=False, dry_run=False)
 
     assert "image model is installed" in capsys.readouterr().out
+
+
+def test_comfyui_clone_is_pinned_to_release(monkeypatch, tmp_path):
+    commands = []
+    monkeypatch.setattr(setup_local, "_run", lambda command, dry_run: commands.append(command))
+
+    setup_local._ensure_comfyui_checkout(tmp_path / "ComfyUI", dry_run=True)
+
+    clone = commands[0]
+    assert clone[clone.index("--branch") + 1] == setup_local.COMFYUI_REF
+    assert setup_local.COMFYUI_REF.startswith("v")
+
+
+def test_existing_comfyui_off_pinned_release_warns(monkeypatch, tmp_path, capsys):
+    comfy = tmp_path / "ComfyUI"
+    (comfy / ".git").mkdir(parents=True)
+    (comfy / "main.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(setup_local, "_git_describe", lambda path: "v0.0.1")
+
+    setup_local._ensure_comfyui_checkout(comfy, dry_run=True)
+
+    assert "WARNING" in capsys.readouterr().out
