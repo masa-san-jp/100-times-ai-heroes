@@ -145,8 +145,10 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Ollamaを起動せず、指定されたproviderで実行する",
     )
-    parser.add_argument("generator_args", nargs=argparse.REMAINDER)
-    return parser.parse_args(argv)
+    # REMAINDER cannot capture leading "--option" args, so pass unknown args through.
+    args, generator_args = parser.parse_known_args(argv)
+    args.generator_args = generator_args
+    return args
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:

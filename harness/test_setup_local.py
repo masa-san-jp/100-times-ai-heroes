@@ -10,6 +10,7 @@ from types import SimpleNamespace
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+import run_local  # noqa: E402
 import setup_local  # noqa: E402
 from comfyui_config import resolve_comfyui_dir, resolve_comfyui_venv  # noqa: E402
 from image_model_profiles import get_image_model_profile  # noqa: E402
@@ -110,3 +111,16 @@ def test_existing_comfyui_off_pinned_release_warns(monkeypatch, tmp_path, capsys
     setup_local._ensure_comfyui_checkout(comfy, dry_run=True)
 
     assert "WARNING" in capsys.readouterr().out
+
+
+def test_run_local_passes_generator_options_through():
+    args = run_local.parse_args(["--iterations", "1", "--generate-images", "--no-comfyui"])
+
+    assert args.no_comfyui is True
+    assert args.generator_args == ["--iterations", "1", "--generate-images"]
+
+
+def test_run_local_accepts_double_dash_separator():
+    args = run_local.parse_args(["--", "--iterations", "2"])
+
+    assert args.generator_args[-2:] == ["--iterations", "2"]
