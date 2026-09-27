@@ -29,6 +29,7 @@ from comfyui_image_gen import (  # noqa: E402
 from image_model_profiles import (  # noqa: E402
     build_image_prompt,
     get_image_model_profile,
+    normalize_ability_text,
 )
 from memory_safety import MemoryBudgetExceeded  # noqa: E402
 import ollama_hero_gen as app  # noqa: E402
@@ -45,6 +46,13 @@ from ollama_hero_gen import (  # noqa: E402
     generate_characters,
     generate_image_prompt,
 )
+from tools.benchmark_image_models import (  # noqa: E402
+    BENCHMARK_CASES,
+    DEFAULT_PROFILE_IDS,
+    SHARED_NEGATIVE_PROMPT,
+    build_shared_image_prompt,
+)
+from tools.render_benchmark_page import render_benchmark_page  # noqa: E402
 
 
 def make_config(tmp_path: Path, **overrides) -> Config:
@@ -166,6 +174,88 @@ def test_model_profile_prompt_uses_project_attributes(tmp_path):
     assert "A guardian who turns noise into music." in prompt
 
 
+@pytest.mark.parametrize("profile_id", ["generic-sdxl", "animagine-xl-4.0-opt", "qwen-image-2.1"])
+def test_ability_normalizer_is_used_by_all_prompt_styles(profile_id):
+    profile = get_image_model_profile(profile_id, PROJECT_ROOT / "config/comfyui/model_profiles.json")
+    prompt = build_image_prompt(
+        profile,
+        concept="A calm guardian.",
+        age="young adult",
+        gender="male",
+        species="human",
+        ability="Can cut through digital noise",
+        role="Guardian",
+    )
+
+    assert "ability to cut through digital noise" in prompt
+    assert "Can cut through digital noise" not in prompt
+    if profile.prompt_style == "natural":
+        assert ".." not in prompt
+        assert "who has the ability to cut through digital noise" in prompt
+
+
+def test_normalize_ability_text_rules_are_exact():
+    assert normalize_ability_text("Can cut through digital noise") == (
+        "ability to cut through digital noise"
+    )
+    assert normalize_ability_text("cAn cut through digital noise") == (
+        "ability to cut through digital noise"
+    )
+    assert normalize_ability_text("Has the ability to cut through digital noise") == (
+        "ability to cut through digital noise"
+    )
+    assert normalize_ability_text("Canine vigilance") == "Canine vigilance"
+
+
+def test_shared_prompt_is_identical_across_profiles():
+    prompts = {build_shared_image_prompt(BENCHMARK_CASES[0]) for _ in DEFAULT_PROFILE_IDS}
+    assert len(prompts) == 1
+    assert next(iter(prompts)).startswith(
+        "1boy, solo, full body, standing, looking at viewer, feet visible, "
+        "centered composition, white background"
+    )
+    assert SHARED_NEGATIVE_PROMPT.startswith("nsfw, nude, nipples, underwear, swimsuit")
+
+
+def test_renderer_creates_all_fixture_image_slots(tmp_path):
+    profiles = [
+        {"profile_id": profile_id, "steps": 25, "cfg": 7.0, "sampler": "euler", "scheduler": "normal", "clip_skip": None}
+        for profile_id in DEFAULT_PROFILE_IDS
+    ]
+    results = []
+    for case in BENCHMARK_CASES:
+        for profile in profiles:
+            for seed in (101, 202):
+                image = tmp_path / f"{profile['profile_id']}_{case['id']}_{seed}.png"
+                image.write_bytes(b"dummy image")
+                results.append(
+                    {
+                        "profile": profile["profile_id"],
+                        "case": case["id"],
+                        "seed": seed,
+                        "status": "success",
+                        "image_path": str(image),
+                        "elapsed_seconds": 1.0,
+                        "prompt": "shared prompt",
+                        "negative_prompt": SHARED_NEGATIVE_PROMPT,
+                    }
+                )
+    report = {
+        "prompt_mode": "shared",
+        "profiles": profiles,
+        "cases": BENCHMARK_CASES,
+        "seeds": [101, 202],
+        "results": results,
+    }
+    (tmp_path / "report.json").write_text(json.dumps(report), encoding="utf-8")
+
+    output = render_benchmark_page(tmp_path)
+
+    assert output.exists()
+    assert (tmp_path / "thumbs").is_dir()
+    assert output.read_text(encoding="utf-8").count('class="image-cell"') == 30
+
+
 def test_qwen_profile_uses_bf16_files_and_natural_prompt():
     profile = get_image_model_profile(
         "qwen-image-2.1",
@@ -190,7 +280,7 @@ def test_qwen_profile_uses_bf16_files_and_natural_prompt():
     )
     assert "young adult female human" in prompt
     assert "Sound Cartographer" in prompt
-    assert "Can transform digital noise into music" in prompt
+    assert "ability to transform digital noise into music" in prompt
     assert "full body" in prompt.lower()
     assert "single character" in prompt.lower()
     assert "plain white background" in prompt.lower()
@@ -918,7 +1008,9 @@ def test_comfyui_qwen_workflow_injects_all_profile_model_files():
     assert workflow["2"]["inputs"]["clip_name"] == "qwen3vl_8b_bf16.safetensors"
     assert workflow["3"]["inputs"]["vae_name"] == "qwen_image_2.1_vae_bf16.safetensors"
     assert workflow["4"]["inputs"]["prompt"] == "A hero"
-    assert workflow["4"]["inputs"]["negative_prompt"] == ""
+    assert workflow["4"]["inputs"]["negative_prompt"] == (
+        "nsfw, nude, nipples, child, loli, shota"
+    )
     assert workflow["5"]["inputs"]["width"] == 896
     assert workflow["5"]["inputs"]["height"] == 1152
     assert workflow["6"]["inputs"]["seed"] == 42

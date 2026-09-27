@@ -50,6 +50,7 @@ class ImageModelProfile:
     workflow_path: str = DEFAULT_WORKFLOW_PATH
     model_files: List[ImageModelFile] = field(default_factory=list)
     license_note: str = ""
+    timeout_seconds: float = 300.0
 
 
 BUILTIN_PROFILES: Dict[str, ImageModelProfile] = {
@@ -180,6 +181,7 @@ def _profile_from_dict(profile_id: str, value: dict) -> ImageModelProfile:
             for model_file in _parse_model_files(profile_id, value.get("model_files", []))
         ],
         license_note=str(value.get("license_note", "")),
+        timeout_seconds=float(value.get("timeout_seconds", 300)),
     )
 
 
@@ -259,6 +261,35 @@ def _tag_phrase(value: str) -> str:
     return _compact(value).replace(";", ",")
 
 
+def normalize_ability_text(ability: str) -> str:
+    """画像プロンプト向けに能力文の先頭表現をそろえる。"""
+    text = str(ability or "")
+    text = re.sub(r"^Can ", "ability to ", text, count=1, flags=re.IGNORECASE)
+    text = re.sub(
+        r"^Has the ability to ",
+        "ability to ",
+        text,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+    return text
+
+
+def _ability_action(ability: str) -> str:
+    """能力文から、自然文の ``has the ability to`` に続く部分を返す。"""
+    normalized = normalize_ability_text(ability)
+    prefix = "ability to "
+    if normalized.lower().startswith(prefix):
+        return normalized[len(prefix) :]
+    return normalized
+
+
+def _with_terminal_period(text: str) -> str:
+    if not text:
+        return text
+    return text if text.endswith((".", "!", "?")) else f"{text}."
+
+
 def build_image_prompt(
     profile: ImageModelProfile,
     *,
@@ -270,6 +301,7 @@ def build_image_prompt(
     role: str = "",
 ) -> str:
     """プロファイルごとのprompt形式で、全身キャラクター向けpromptを作る。"""
+    normalized_ability = normalize_ability_text(_compact(ability))
     if profile.prompt_style == "natural":
         attributes = [
             _compact(age),
@@ -280,18 +312,20 @@ def build_image_prompt(
         subject = f"{subject} character" if subject else "character"
         article = "an" if subject[0].lower() in "aeiou" else "a"
         role_text = _compact(role)
-        ability_text = _compact(ability)
+        ability_action = _ability_action(normalized_ability)
         concept_text = _compact(concept)
         sentences = [
             f"{article.capitalize()} {subject} whose role is {role_text}"
             if role_text
             else f"{article.capitalize()} {subject}",
         ]
-        if ability_text:
-            sentences[0] += f" and whose ability is {ability_text}"
-        sentences[0] += "."
+        if ability_action:
+            sentences[0] += f" and who has the ability to {ability_action}"
+        sentences[0] = _with_terminal_period(sentences[0])
         if concept_text:
-            sentences.append(f"The character is based on the concept: {concept_text}.")
+            sentences.append(
+                f"The character is based on the concept: {_with_terminal_period(concept_text)}"
+            )
         sentences.append(
             "Full body, single character, plain white background, anime illustration style, "
             "no text or watermark."
@@ -299,12 +333,18 @@ def build_image_prompt(
         return " ".join(sentences)
 
     if profile.prompt_style == "prose":
+        ability_action = _ability_action(normalized_ability)
+        ability_clause = (
+            f" The character has the ability to {ability_action}."
+            if ability_action
+            else ""
+        )
         return (
             "The full-length character illustration from video games, likely from "
             "role-playing games (JRPG) or fighting games. A camera angle that captures "
             "the entire body evenly from waist height. Standing upright and looking "
             "straight ahead. White background. "
-            f"{_compact(concept)}, delicate hand-drawn lines, Japanese manga and anime "
+            f"{_compact(concept)},{ability_clause} Delicate hand-drawn lines, Japanese manga and anime "
             "influence, realistic proportions, detailed textures, sophisticated haute "
             "couture fashion, edgy character design, strong individuality."
         )
@@ -319,7 +359,7 @@ def build_image_prompt(
         "centered composition",
         "white background",
     ]
-    for value in (age, species, role, ability):
+    for value in (age, species, role, normalized_ability):
         phrase = _tag_phrase(value)
         if phrase:
             tags.append(phrase)
