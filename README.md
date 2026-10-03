@@ -522,3 +522,8 @@ flowchart LR
 	Profile --> Character
 	Seriff --> Character
 ```
+
+## 旧版から現在の構成へ
+
+リポジトリには、Google Colab・Google Sheets・OpenAI API を使う [v1.0スクリプト](20240916-AI-Art-GP-3-Charactor-v1.0.py) が残っています。現在の標準導線は [ローカル版設計](docs/DESIGN_SPEC_OLLAMA.md)にある CSV・Ollama・ComfyUI の構成です。属性の組み合わせからキャラクターを作る工程を引き継ぎながら、保存先と生成処理をローカルに置ける形へ展開しています。旧版の認証・Sheets設定は現在のクイックスタートには不要です。各版の存在と構成上の関係を示すもので、移行日や全環境での動作を保証するものではありません。
+
